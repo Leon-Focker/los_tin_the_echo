@@ -9,9 +9,6 @@
 
 ;; Michael Edwards samp1 instrument
 (load (compile-file "/E/code/feedback/samp1.ins"))
-;; some more clm instruments:
-(in-package :clm)
-(load (compile-file "/home/leon/lisp/clm-6/addsnd.ins"))
 
 ;; use all in one package
 (defpackage :feedback
@@ -81,14 +78,22 @@
 			  :channels 2 :play nil)
 ;;; start-times are start-times of sections in *form*
   (let* ((start-times (append '(0) (loop for i in (first *form*) sum i into sum collect sum)))
+	 (sec2-ly3-durations
+	  (loop for i in (third *form*) sum i into sum while (< sum (startn 2))
+	     when (> sum (startn 1)) collect i))
+	 #+nil(sec2-ly3-start-times
+	       (loop for i in (third *form*) sum i into sum while (< sum (startn 2))
+		  when (> sum (startn 1)) collect sum))
 	 (dur2 (- (startn 2) (startn 1)))
-	 (rhythm1 (morph-patterns (list *pattern4* *pattern1*)
-				  dur2 nil (fibonacci-transition dur2)))
-	 (rhythm2 (interpolate-patterns (list *pattern4* *pattern1*)
-					dur2))
+	 (rhythm1 (interpolate-patterns (procession (1+ (length sec2-ly3-durations))
+						    `(,*pattern5* ,*pattern6* ,*pattern7* ,*pattern7*))
+					dur2 nil sec2-ly3-durations))
+	 (rhythm2 (interpolate-patterns (fibonacci-transitions (1+ (length sec2-ly3-durations))
+							       `(,*pattern5* ,*pattern6* ,*pattern7*))
+					dur2 nil sec2-ly3-durations))
 	 (rhythm3 (morph-patterns (list *pattern4* *pattern1*)
 				  dur2 nil (fibonacci-transition dur2))))
-    (declare (special start-times rhythm1 rhythm2 rhythm3))
+    (declare (special start-times rhythm1 rhythm2 rhythm3))sec2-ly3-durations
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 1
 ;;; TODO: how many channels?
@@ -112,7 +117,7 @@
       (fb-play (startn 1) (startn 2)
 	       (#'(lambda() (samp1 file time
 				   :duration duration
-		  		   :amp 0.7
+		  		   :amp 0.5
 				   :amp-env *amp-env01*
 				   :srt 1
 				   :degree (random 90))))
@@ -125,23 +130,12 @@
 	       (#'(lambda () (samp1 file time
 				    :duration duration
 				    :degree degree
-				    :amp (* (- 0.99 (* line 0.5)) 0.7)))
+				    :amp (* (- 0.99 (* line 0.5)) 0.6)))
 		  #'(lambda () (samp1 file time
 				      :duration duration
 				      :degree degree
 				      :srt 2
 				      :amp (* line 0.55))))
-	       :rhythm-list rhythm1
-	       :new-id
-	       #'(lambda () (decide-for-snd-file
-			     (get-sub-list-of-closest *percussive* (vector line line 0.5)
-						      :max-distance 0.6)
-			     (random 0.5))))
-      (fb-play (startn 1) (startn 2)
-	       (#'(lambda () (samp1 file time
-				    :amp 0.7
-				    :duration duration
-				    :degree 0)))
 	       :rhythm-list rhythm2
 	       :new-id
 	       #'(lambda () (decide-for-snd-file
@@ -150,10 +144,21 @@
 			     (random 0.5))))
       (fb-play (startn 1) (startn 2)
 	       (#'(lambda () (samp1 file time
-				    :amp 0.7
+				    :amp 0.6
+				    :duration duration
+				    :degree 0)))
+	       :rhythm-list rhythm1
+	       :new-id
+	       #'(lambda () (decide-for-snd-file
+			     (get-sub-list-of-closest *percussive* (vector line line 0.5)
+						      :max-distance 0.6)
+			     (random 0.5))))
+      (fb-play (startn 1) (startn 2)
+	       (#'(lambda () (samp1 file time
+				    :amp 0.6
 				    :duration duration
 				    :degree 90)))
-	       :rhythm-list rhythm3
+	       :rhythm-list rhythm1
 	       :new-id
 	       #'(lambda () (decide-for-snd-file
 			     (get-sub-list-of-closest *percussive* (vector line line 0.5)

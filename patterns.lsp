@@ -4,6 +4,9 @@
 (defparameter *pattern2* '(0.5 0.75 0.75 0.5 0.75 0.5 0.75))
 (defparameter *pattern3* '(0.75 0.5 0.75 0.5 0.75 0.5 0.5 0.75))
 (defparameter *pattern4* '(1/2 2/3 1/2 1/3 1/3 1/3 3/4))
+(defparameter *pattern5* '(0.2 0.45 0.2 0.5 0.45))
+(defparameter *pattern6* '(1 1/6 1/6 0.2 1/3))
+(defparameter *pattern7* '(0.2 0.2 0.4))
 
 
 (defparameter *amp-env01*
