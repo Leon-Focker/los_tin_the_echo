@@ -1,13 +1,35 @@
-;; Utilities for feedback
+;; * Utilities for feedback
 (in-package :fb)
 
-;; start
+;; ** get-start-times
+;;; gat start times from a list of durations
+(defun get-start-times (ls)
+  (append '(0) (loop for i in ls sum i into sum collect sum)))
+
+;; ** startn
 ;;; syntactic sugar for (nth 0 start-times)
 ;;; start-times must of course be bound, else the compiler will complain :)
 (defmacro startn (index)
   `(nth ,index start-times))
 
-;; dynamic-collect
+;; ** get-durations-within
+;;; collect the durations in a certain section of a certain layer
+(defun get-durations-within (durations min max)
+  (loop for i in durations sum i into sum while (< sum max)
+     when (> sum min) collect i))
+
+;; ** get-start-times-within
+;;; collect the durations in a certain section of a certain layer
+(defun get-start-times-within (durations min max)
+  (loop for i in durations sum i into sum while (< sum max)
+     when (> sum min) collect sum))
+
+;; ** avoid-repetition
+;;; in a list of elements, when an element appears twice in a row it is cut
+(defun avoid-repetition (ls)
+  (loop for i in ls with last unless (equal last i) collect i do (setf last i)))
+
+;; ** dynamic-collect
 ;;; give any amount of arguments to a collect in a loop in a macro :)
 ;;; see play-rhythm for actual use
 (defmacro dynamic-collect (&rest rest)
@@ -15,7 +37,7 @@
 (defmacro dynamic-collect-instruments (instrument-calls)
   `(loop for i in ,instrument-calls collect 'collect collect `(funcall ,i)))
 
-;; play-rhythm
+;; ** play-rhythm
 ;;; easy way to play rhythm with soundfiles
 (defmacro fb-play (start-time end-time instrument-calls
 		   &key (sfl *percussive*)
@@ -24,7 +46,8 @@
 		     duration
 		     (rhythm-list '(list 10))
 		     rhythm-fun
-		     (degree 45))
+		     (degree 45)
+		     (printing t))
   `(loop for i from 0
       with time = ,start-time
       while (<= time ,end-time)
@@ -42,6 +65,11 @@
 		       (nth (mod i (length ,rhythm-list)) ,rhythm-list))
       for degree = ,degree
 	,@(dynamic-collect-instruments instrument-calls)
-      do (incf time rhythm)))
+      do (when ,printing
+	  (format t "~&~a" (ly::id sound))
+	  (format t "~&start-time: ~a" time)
+	  (format t "~&rhythm: ~a" rhythm)
+	  (format t "~& ~&next sound:"))
+	(incf time rhythm)))
 
 ;; EOF utilities.lsp

@@ -16,21 +16,6 @@
 		    rhythm
 		    (error "pattern holds weird value: ~a" rhythm))))))
 
-;; * decider
-;;; copied from utilities.lsp in layers package
-(defun decider (chooser ls)
-  (labels ((helper (chooser ls1 index sum)
-	     (cond ((null ls1) (1- (length ls)))
-		   ((< chooser sum) index)
-		   (t (helper chooser
-			      (cdr ls1)
-			      (+ index 1)
-			      (+ sum (car ls1)))))))
-    (helper (sc::rescale chooser 0 1 0 (loop for i in ls
-					  do (unless i (error 'no-value))
-					  sum i))
-	    (cdr ls) 0 (car ls))))
-
 ;; * mod1
 (defun mod1 (x)
   (cond ((= 0 x) 0)
@@ -52,6 +37,69 @@
 ;;;  Also this currently only works when a list is given for the transition
 ;;; overlap-duration - t will append the last rhythm without squeezing it
 ;;;  perfectly into the given duration (no subtraction of last rhythm)
+(defun morph-patterns (patterns duration &optional
+					   cut-end?
+					   overlap-duration
+					   (morphing-function (fibonacci-transition 20)))
+  (unless (typep patterns 'list)
+    (error "morph-patterns needs patterns to be a list: ~a" patterns))
+  (unless (> duration 0)
+    (error "for morph-patterns, duration must be greater than 0: ~a" duration))
+  (unless (typep morphing-function 'function)
+    (if (typep morphing-function 'list)
+	(setf morphing-function
+	      (ly::make-list-into-function morphing-function
+					   (+ duration (if cut-end?
+							   (length (last patterns))
+							   0))))
+	(error "morphing-function must either be of type function or list: ~a"
+	       morphing-function)))
+  (unless (numberp (funcall morphing-function 0))
+    (error "morphing function not usefull: ~a" morphing-function))
+  (let* ((rhythms-list (patterns-to-rhythms-list patterns)))
+    (loop
+       for sum = 0 then (+ sum rhythm)
+       for key = (round (ly::mirrors (funcall morphing-function sum) 0 (length patterns)))
+       for pattern = (nth key patterns)
+       for rhythms = (nth key rhythms-list)
+       ;; position relative to the pattern
+       for index = (decider (let ((pattern-len (loop for i in rhythms sum i)))
+				  (rescale (+ (mod sum pattern-len)
+					      (expt 10.0d0 -8)) ; to combat float-errors i guess
+					   0
+					   pattern-len
+					   0
+					   1))
+				rhythms)
+       ;; rhythm is the duration of the event
+       for rhythm = (nth index rhythms)
+       ;; event can be a rest or a note with a duration
+       for event = (nth index pattern)
+       until (>= (+ sum rhythm) duration)
+       collect event into ls
+       ;; when the next rhythm would complete the sequence:
+       finally
+       ;; add a difference, to bring sequence to its max length
+       ;; if the rhythm-value was a rest, the added difference will
+       ;; too be a rest
+	 (let* ((difference (rationalize (- duration sum))))
+	   (unless (sc::equal-within-tolerance difference 0)
+	     (cond (overlap-duration (setf ls (append ls (list event))))
+		   ((atom event) (setf ls (append ls (list difference))))
+		   (t (setf ls (append ls (list (list difference))))))))
+       ;; return the final rhythm sequence:
+	 (return ls))))
+
+;; * interpolate-patterns
+;;; slowly adjust the durations of a pattern until it matches the next one
+;;; patterns - list of sublists containing durations - a list of patterns
+;;; duration - the sum of all durations in the result
+;;;  -> the duration of the resulting sequence
+;;; transition-ratios - the duration of the interpolation between one pattern
+;;;  and the next, relative to the duration of the result. This must be a list
+;;;  with one less item than the patterns argument, so if you want to morph
+;;;  three patterns, transition-ratios would initially be '(1 1) but could be
+;;;  set to any list containing any two numbers.
 (defun interpolate-patterns (patterns duration
 			     &optional overlap-duration transition-ratios)
   (if transition-ratios
@@ -100,64 +148,7 @@
 	 (return ls))))
 
 ;; OLD CODE
-(defun morph-patterns (patterns duration &optional
-					   cut-end?
-					   overlap-duration
-					   (morphing-function (fibonacci-transition 20)))
-  (unless (typep patterns 'list)
-    (error "morph-patterns needs patterns to be a list: ~a" patterns))
-  (unless (> duration 0)
-    (error "for morph-patterns, duration must be greater than 0: ~a" duration))
-  (unless (typep morphing-function 'function)
-    (if (typep morphing-function 'list)
-	(setf morphing-function
-	      (ly::make-list-into-function morphing-function
-					   (+ duration (if cut-end?
-							   (length (last patterns))
-							   0))))
-	(error "morphing-function must either be of type function or list: ~a"
-	       morphing-function)))
-  (unless (numberp (funcall morphing-function 0))
-    (error "morphing function not usefull: ~a" morphing-function))
-  (let* ((rhythms-list (patterns-to-rhythms-list patterns)))
-    (loop
-       for sum = 0 then (+ sum rhythm)
-       for key = (round (ly::mirrors (funcall morphing-function sum) 0 (length patterns)))
-       for pattern = (nth key patterns)
-       for rhythms = (nth key rhythms-list)
-       ;; position relative to the pattern
-       for index = (ly::decider (let ((pattern-len (loop for i in rhythms sum i)))
-				  (rescale (+ (mod sum pattern-len)
-					      (expt 10.0d0 -8)) ; to combat float-errors i guess
-					   0
-					   pattern-len
-					   0
-					   1))
-				rhythms)
-       ;; rhythm is the duration of the event
-       for rhythm = (nth index rhythms)
-       ;; event can be a rest or a note with a duration
-       for event = (nth index pattern)
-       until (>= (+ sum rhythm) duration)
-       collect event into ls
-       ;; when the next rhythm would complete the sequence:
-       finally
-       ;; add a difference, to bring sequence to its max length
-       ;; if the rhythm-value was a rest, the added difference will
-       ;; too be a rest
-	 (let* ((difference (rationalize (- duration sum))))
-	   (unless (sc::equal-within-tolerance difference 0)
-	     (cond (overlap-duration (setf ls (append ls (list event))))
-		   ((atom event) (setf ls (append ls (list difference))))
-		   (t (setf ls (append ls (list (list difference))))))))
-       ;; return the final rhythm sequence:
-	 (return ls))))
 
-;; * interpolate-patterns
-;;; slowly adjust the durations of a pattern until it matches the next one
-;;; patterns - list of sublists containing durations - a list of patterns
-;;; duration - the sum of all durations in the result
-;;;  -> the duration of the resulting sequence
 #+nil(defun interpolate-patterns (patterns duration &optional overlap-duration)
   (unless (typep patterns 'list)
     (error "morph-patterns needs patterns to be a list: ~a" patterns))
@@ -194,7 +185,7 @@
        (return ls)))
 
 ;; * non-linear-interpolate - OBSOLETE AND NONFUNCTIONAL
-;;; when more than two patterns are interpolated tiwh interpolate-patterns
+;;; when more than two patterns are interpolated with interpolate-patterns
 ;;; the transitions all have the same length. This function will avoid that.
 ;;; there will not be a non-linear-morph, since morph-patterns can just take
 ;;; different morphing-functions as argument
