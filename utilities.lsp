@@ -12,10 +12,19 @@
 (defmacro startn (index)
   `(nth ,index start-times))
 
+;; ** avoid-repetition
+;;; in a list of elements, when an element appears twice in a row it is cut
+(defun avoid-repetition (ls &optional within-tolerance?)
+  (loop for i in ls with last unless (if within-tolerance?
+					 (equal-within-tolerance last i 1.0d-5)
+					 (equal last i))
+     collect i do (setf last i)))
+
 ;; ** get-durations
 ;;; collect the durations in a certain section of a certain layer
 (defun get-durations (list-of-start-times)
-  (loop for time in list-of-start-times with last = 0
+  (loop for time in (avoid-repetition (sort list-of-start-times #'<) t)
+     with last = 0
      collect (- time last)
      do (setf last time)))
 
@@ -31,11 +40,6 @@
   (loop for i in durations sum i into sum while (< sum max)
      when (> sum min) collect sum))
 
-;; ** avoid-repetition
-;;; in a list of elements, when an element appears twice in a row it is cut
-(defun avoid-repetition (ls)
-  (loop for i in ls with last unless (equal last i) collect i do (setf last i)))
-
 ;; ** dynamic-collect
 ;;; give any amount of arguments to a collect in a loop in a macro :)
 ;;; see play-rhythm for actual use
@@ -46,6 +50,7 @@
 
 ;; ** play-rhythm
 ;;; easy way to play rhythm with soundfiles
+;;; do we really use rhythm-lists tho? or is it replaced by rhythm-fun
 (defmacro fb-play (start-time end-time instrument-calls
 		   &key (sfl *percussive*)
 		     new-id ;(lambda () (ly::id (first (ly::data sfl)))))

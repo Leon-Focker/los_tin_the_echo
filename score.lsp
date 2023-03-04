@@ -1,5 +1,7 @@
 ;; * SCORE
 
+(in-package :fb)
+
 ;; ** form
 ;; 1 intro (pure)
 ;; 2 rhythmen (pure + percussive)
@@ -43,28 +45,76 @@
        (rthm4 (morph-patterns (list rthm1 rthm2) 100 nil t len (wt len 5 .3)))
        (rthm5 (morph-patterns (list rthm1 rthm2) 100 nil t len (wt len 6 .3)))
        (ls '()))
-  (setf rthm3 (get-durations (sort rthm3 #'<)))
-  (setf rthm4 (get-durations (sort rthm4 #'<)))
-  (setf rthm5 (get-durations (sort rthm5 #'<)))
+  (setf rthm3 (get-durations rthm3))
+					;(setf rthm4 (get-durations rthm4))
+					;(setf rthm5 (get-durations rthm5))
   (setf ls (list rthm3 rthm4 rthm5))
   (defun rthms1 (i rthm-index)
-    (nth (mod i len) (nth rthm-index ls))))
+    (let ((l (nth rthm-index ls)))
+      (nth (mod i (length l)) l))))
+
+;; rhythms of type 2
+(let* ((len 99)
+       (base '(.4 .8 .4 .6 .8 1.2 .2 .4))
+       (base1 '(.2 .2 .2 .2))
+       (base2 '(.4 .4 .4 .4))
+       ;(base3 '(.6 .6 .6 .6))
+       (rthm1 (wt len base))
+       (rthm2 (wt len (loop for i in base collect (/ i 2))))
+       (st1 (get-start-times rthm1))
+       (st2 (get-start-times rthm2))
+       (rthm3 (morph-patterns (list base1 base2) 1 nil t len (wt len 4 .3)))
+       (rthm4 (morph-patterns (list st1 st2) 1 nil t len (wt len 5 .3)))
+       (rthm5 (morph-patterns (list st1 st2) 1 nil t len (wt len 6 .3)))
+       (ls '()))
+  (setf rthm4 (get-durations rthm4))
+  (setf rthm5 (get-durations rthm5))
+  (setf ls (list rthm1 rthm2 rthm3 rthm4 rthm5))
+  (defun rthms2 (i rthm-index)
+    (let ((l (nth rthm-index ls)))
+      (nth (mod i (length l)) l))))
+
+(let* ((pattern1 '(.2 .2 .2 .2 .2))
+       (spattern1 '(0 0 0 0 5))
+       (pattern2 '(.3 .3 .3 .1))
+       (spattern2 '(0 0 0 5))
+       (pattern3 (morph-patterns (list pattern1 pattern2) 60 nil t nil
+				 (fibonacci-transition 120)))
+       (pattern4 (morph-patterns (list pattern1 pattern2) 60 nil t nil
+				 (fibonacci-transition 80)))
+       (len1 (length pattern1))
+       (len2 (length pattern2))
+       (len3 (length pattern3))
+       (len4 (length pattern4)))
+  (defun pattern1 (i)
+    (nth (mod i len1) pattern1))
+  (defun spattern1 (i)
+    (nth (mod i len1) spattern1))
+  (defun pattern3 (i)
+    (nth (mod i len3) pattern3))
+  (defun pattern4 (i)
+    (nth (mod i len4) pattern4)))
 
 ;; collection of some different lists
 (let* ((len 30)
-       (ls1 (avoid-repetition (procession len (loop for i below 18 collect i))))
+       (quiet-len (length (ly::data *pure-atoms*)))
+       (ls1 (avoid-repetition
+	     (procession len (loop for i below quiet-len collect i))))
        (len1 (length ls1))
-       (ls2 (avoid-repetition (wt len 18)))
+       (ls2 (avoid-repetition (wt len quiet-len)))
        (len2 (length ls2))
        (ls3 (procession len '(0 3 0.8 5)))
        (ls4 (wt (+ len 5) '(0 3 0.8 5 1) 0.5))
-       (ls5 (wt len '(0 0.05 .1 .2 .35 .4))))
+       (ls5 (wt len '(0 0.05 .1 .2 .35 .4)))
+       (ls6 (wt (* len 2) (length (ly::data *pure-atoms*)))))
   (defmacro i-from (ls &optional (len len))
-    `(nth (mod i ,len) ,ls))
+  `(nth (mod i ,len) ,ls))
   (defun sound-fun1 (i)
     (i-from ls1 len1))
   (defun sound-fun2 (i)
     (i-from ls2 len2))
+  (defun sound-fun3 (i)
+    (i-from ls6 (* 2 len)))
   (defun rest-fun1 (i)
     (i-from ls3))
   (defun rest-fun2 (i)
@@ -132,11 +182,14 @@
 				    :printing nil)))
 	       ;; duration of the sample + rest
 	       :rhythm-fun (+ (* (ly::duration (nth (sound-fun2 i)
-						    (reverse (ly::data *quiet-atoms*))))
+						    (reverse (ly::data
+							      *quiet-atoms*))))
 				 (/ 1 (srt-fun1 i)))
 			      (rest-fun2 i))
 	       :sound (nth (sound-fun1 i)
 			   (reverse (ly::data *quiet-atoms*)))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Teil 2
     (with-mix () "/E/code/feedback/continuo" 0
       (fb-play (startn 1) (startn 2)
 	       (#'(lambda () (samp1 file time
@@ -146,7 +199,6 @@
 				    :srt (srt-fun1 i)
 				    :degree 0
 				    :printing nil)))
-	       ;; duration of the sample + rest
 	       :rhythm-fun (rthms1 i 1)
 	       ;;:duration (- 80 (* time 0.7))
 	       :sound (nth (sound-fun2 i)
@@ -159,7 +211,6 @@
 				    :srt (srt-fun1 i)
 				    :degree 45
 				    :printing nil)))
-	       ;; duration of the sample + rest
 	       :rhythm-fun (rthms1 i 2)
 	       ;;:duration (- 80 (* time 0.7))
 	       :sound (nth (sound-fun2 i)
@@ -172,13 +223,35 @@
 				    :srt (srt-fun1 i)
 				    :degree 90
 				    :printing nil)))
-	       ;; duration of the sample + rest
 	       :rhythm-fun (rthms1 i 3)
 	       ;;:duration (- 80 (* time 0.7))
 	       :sound (nth (sound-fun2 i)
 			   (reverse (ly::data *quiet-atoms*)))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Teil 2
+    (with-mix () "/E/code/feedback/beat" 0
+      (fb-play (startn 1) (startn 2)
+	       (#'(lambda () (samp1 file time
+				    :duration (/ rhythm 3)
+				    :amp 0.7
+				    :amp-env *amp-env01*
+				    :srt 1
+				    :degree 30
+				    :printing nil)))
+	       :rhythm-fun (pattern3 i)
+	       :sound (nth (spattern1 i)
+			   (reverse (ly::data *percussive*))))
+      (fb-play (startn 1) (startn 2)
+	       (#'(lambda () (samp1 file time
+				    :duration (/ rhythm 3)
+				    :amp 0.7
+				    :amp-env *amp-env01*
+				    :srt 1
+				    :degree 60
+				    :printing nil)))
+	       :rhythm-fun (pattern4 i)
+	       :sound (nth (spattern1 i)
+			   (reverse (ly::data *percussive*)))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; TODO: make x y z dependend on time in rhythm
     #+nil(with-mix () "/E/code/feedback/build-pure" 0
 	   (fb-play (startn 1) (startn 2)

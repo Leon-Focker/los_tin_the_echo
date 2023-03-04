@@ -66,27 +66,26 @@
 	       morphing-function)))
   (unless (numberp (funcall morphing-function 0))
     (error "morphing function not usefull: ~a" morphing-function))
-  ;(when length (setf overlap-duration t))
-  ;;(visualize (print (loop for i below 64 collect (funcall morphing-function i))))
+  (when length (setf overlap-duration t))
+  ;;(visualize (print (loop for i below length collect (funcall morphing-function i))))
   (let* ((rhythms-list (patterns-to-rhythms-list patterns)))
     (loop for i from 0
-       for sum = 0 then (+ sum (if (= 0 rhythm) 1 rhythm))
-       for key = (mod (round (ly::mirrors (funcall morphing-function sum)
-					  0 (length patterns)))
-		      (length patterns))
+       for sum = 0 then (float (+ sum (if (= 0 rhythm) 1 rhythm)) 0.0d0)
+       for key = (round (ly::mirrors (funcall morphing-function sum)
+				     0 (1- (length patterns))))
        for pattern = (nth key patterns)
        for rhythms = (nth key rhythms-list)
        ;; position relative to the pattern
-       for index = (let ((pattern-dur (loop for i in rhythms sum i)))
-		     (if (= pattern-dur 0)
-			 0
-			 (decider (rescale (+ (mod sum pattern-dur)
-					      (expt 10.0d0 -8)) ; to combat float-errors i guess
+       for index = (let ((pat-dur (float (loop for i in rhythms sum i) 0.0d0)))
+		     (if (not (= pat-dur 0))
+			 (decider (rescale (+ (mod sum pat-dur))
+;;; to combat float-errors, maybe add (expt 10.0d0 -8)
 					   0
-					   pattern-dur
+					   pat-dur
 					   0
 					   1)
-				  rhythms)))
+				  rhythms)
+			 0))
        ;; rhythm is the duration of the event
        for rhythm = (nth index rhythms)
        ;; event can be a rest or a note with a duration
