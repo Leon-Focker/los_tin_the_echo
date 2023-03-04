@@ -28,54 +28,70 @@
 ;;; patterns - list of sublists containing durations - a list of patterns
 ;;; duration - the sum of all durations in the result
 ;;;  -> the duration of the resulting sequence
-;;; morphing-function - determines how the transition between the patterns
-;;;  is happening. Can be a list (eg. one made from fibonacci-transitions).
-;;;  Can also be a function, which must accept one rational number as an
-;;;  argument and returns one rational number.
 ;;; cut-end? - t or nil, tries to avoid a repetition of an entire unaltered
 ;;;  pattern at the end of the sequence. Should be nil for most cases.
 ;;;  Also this currently only works when a list is given for the transition
 ;;; overlap-duration - t will append the last rhythm without squeezing it
 ;;;  perfectly into the given duration (no subtraction of last rhythm)
+;;; morphing-function - determines how the transition between the patterns
+;;;  is happening. Can be a list (eg. one made from fibonacci-transitions).
+;;;  Can also be a function, which must accept one rational number as an
+;;;  argument and returns one rational number.
+;;; length - when nil, generate a list with duration, when a number, generate
+;;;  a list with this length.
 (defun morph-patterns (patterns duration &optional
 					   cut-end?
 					   overlap-duration
-					   (morphing-function (fibonacci-transition 20)))
+					   length
+					   (morphing-function
+					    (fibonacci-transition 20)))
   (unless (typep patterns 'list)
     (error "morph-patterns needs patterns to be a list: ~a" patterns))
-  (unless (> duration 0)
-    (error "for morph-patterns, duration must be greater than 0: ~a" duration))
+  (unless (or (not length) (numberp length))
+    (error "length in morph-patterns should either be nil or a number: ~&~a"
+	   length))
+  (unless (> (or length duration) 0)
+    (error "for morph-patterns, duration or length must be greater than 0: ~a"
+	   (or length duration)))
   (unless (typep morphing-function 'function)
     (if (typep morphing-function 'list)
 	(setf morphing-function
-	      (ly::make-list-into-function morphing-function
-					   (+ duration (if cut-end?
-							   (length (last patterns))
-							   0))))
+	      (ly::make-list-into-function
+	       morphing-function
+	       (or length
+		   (+ duration (if cut-end?
+				   (length (last patterns))
+				   0)))))
 	(error "morphing-function must either be of type function or list: ~a"
 	       morphing-function)))
   (unless (numberp (funcall morphing-function 0))
     (error "morphing function not usefull: ~a" morphing-function))
+  ;(when length (setf overlap-duration t))
+  ;;(visualize (print (loop for i below 64 collect (funcall morphing-function i))))
   (let* ((rhythms-list (patterns-to-rhythms-list patterns)))
-    (loop
-       for sum = 0 then (+ sum rhythm)
-       for key = (round (ly::mirrors (funcall morphing-function sum) 0 (length patterns)))
+    (loop for i from 0
+       for sum = 0 then (+ sum (if (= 0 rhythm) 1 rhythm))
+       for key = (mod (round (ly::mirrors (funcall morphing-function sum)
+					  0 (length patterns)))
+		      (length patterns))
        for pattern = (nth key patterns)
        for rhythms = (nth key rhythms-list)
        ;; position relative to the pattern
-       for index = (decider (let ((pattern-len (loop for i in rhythms sum i)))
-				  (rescale (+ (mod sum pattern-len)
+       for index = (let ((pattern-dur (loop for i in rhythms sum i)))
+		     (if (= pattern-dur 0)
+			 0
+			 (decider (rescale (+ (mod sum pattern-dur)
 					      (expt 10.0d0 -8)) ; to combat float-errors i guess
 					   0
-					   pattern-len
+					   pattern-dur
 					   0
-					   1))
-				rhythms)
+					   1)
+				  rhythms)))
        ;; rhythm is the duration of the event
        for rhythm = (nth index rhythms)
        ;; event can be a rest or a note with a duration
        for event = (nth index pattern)
-       until (>= (+ sum rhythm) duration)
+       until (if length (>= i (1- length)) (>= (+ sum rhythm) duration))
        collect event into ls
        ;; when the next rhythm would complete the sequence:
        finally

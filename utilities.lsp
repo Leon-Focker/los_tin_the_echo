@@ -3,14 +3,21 @@
 
 ;; ** get-start-times
 ;;; gat start times from a list of durations
-(defun get-start-times (ls)
-  (append '(0) (loop for i in ls sum i into sum collect sum)))
+(defun get-start-times (list-of-durations)
+  (append '(0) (loop for i in list-of-durations sum i into sum collect sum)))
 
 ;; ** startn
 ;;; syntactic sugar for (nth 0 start-times)
 ;;; start-times must of course be bound, else the compiler will complain :)
 (defmacro startn (index)
   `(nth ,index start-times))
+
+;; ** get-durations
+;;; collect the durations in a certain section of a certain layer
+(defun get-durations (list-of-start-times)
+  (loop for time in list-of-start-times with last = 0
+     collect (- time last)
+     do (setf last time)))
 
 ;; ** get-durations-within
 ;;; collect the durations in a certain section of a certain layer
@@ -19,7 +26,7 @@
      when (> sum min) collect i))
 
 ;; ** get-start-times-within
-;;; collect the durations in a certain section of a certain layer
+;;; collect the start-times in a certain section of a certain layer
 (defun get-start-times-within (durations min max)
   (loop for i in durations sum i into sum while (< sum max)
      when (> sum min) collect sum))
