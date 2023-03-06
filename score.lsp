@@ -2,6 +2,8 @@
 
 (in-package :fb)
 
+;; TODO: floats and rationals
+
 ;; ** form
 ;; 1 intro (pure)
 ;; 2 rhythmen (pure + percussive)
@@ -29,8 +31,20 @@
 						:duration (* 60 7)
 						:smallest 2))
 			    (form (cdr (reverse (ly::data st)))))
-		       (ly::visualize-structure st 1 "/E/code/feedback/structure_comp1.png")
+		       ;;(ly::visualize-structure st 1 "/E/code/feedback/structure_comp1.png")
 		       form))
+
+(defparameter *sections* (first *form*))
+(defparameter *start-times-1* (first *form*))
+
+(defun start-times (n-for-layer)
+  (when (> n-for-layer (1- (length *form*)))
+    (error "n-for-layer is too big for *form*: ~&~a" n-for-layer))
+  (get-start-times (nth n-for-layer *form*)))
+
+;;; return the start-times of the nth section (starting with 0)
+(defun startn (index)
+  (nth index (start-times 0)))
 
 ;; ** material
 
@@ -44,35 +58,40 @@
        (rthm3 (morph-patterns (list rthm1 rthm2) 100 nil t len (wt len 4 .3)))
        (rthm4 (morph-patterns (list rthm1 rthm2) 100 nil t len (wt len 5 .3)))
        (rthm5 (morph-patterns (list rthm1 rthm2) 100 nil t len (wt len 6 .3)))
-       (ls '()))
-  (setf rthm3 (get-durations rthm3))
-					;(setf rthm4 (get-durations rthm4))
-					;(setf rthm5 (get-durations rthm5))
+       (breaks0 (avoid-repetition (wt 30 '(15 10 1 12 1))))
+       (indices (cdr (loop for i from 0 and k = (length breaks0) then (- k i)
+		     until (<= k 0) collect k)))
+       (breaks (get-start-times
+		(flatten
+		 (insert-multiple 
+		  (scale-list-to-sum breaks0
+				     (- (second (first *form*)) 10))
+		  indices
+		  (reverse (loop for i from 0 below (length indices) collect
+		       (loop repeat (expt 2.1 i) collect .2)))))))
+       (pattern0 '(.2 .2 .2 .2 .2))
+       (rthm2pat01 '())
+       (rthm2pat02 '())
+       (rthm2pat03 '())
+       (ls '())
+       (ls1 '()))
+  (setf rthm3 (get-durations (append breaks rthm3)))
+  (setf rthm4 (get-durations (append breaks rthm4)))
+  (setf rthm5 (get-durations (append breaks rthm5)))
+  ;(setf rthm2pat01 (morph-patterns (list rthm3 pattern0) len nil t nil (wt 1000 25 20)))
+  ;(setf rthm2pat02 (morph-patterns (list rthm4 pattern0) len nil t nil (wt 1000 30 20)))
+  ;(setf rthm2pat03 (morph-patterns (list rthm5 pattern0) len nil t nil (wt 800 25 21)))
+  (setf rthm2pat01 (morph-patterns (list rthm3 pattern0) len nil t nil (fibonacci-transition 40)))
+  (setf rthm2pat02 (morph-patterns (list rthm4 pattern0) len nil t nil (fibonacci-transition 70)))
+  (setf rthm2pat03 (morph-patterns (list rthm5 pattern0) len nil t nil (fibonacci-transition 100)))
   (setf ls (list rthm3 rthm4 rthm5))
+  (setf ls1 (list rthm2pat01 rthm2pat02 rthm2pat03))
   (defun rthms1 (i rthm-index)
     (let ((l (nth rthm-index ls)))
-      (nth (mod i (length l)) l))))
-
-;; rhythms of type 2
-(let* ((len 99)
-       (base '(.4 .8 .4 .6 .8 1.2 .2 .4))
-       (base1 '(.2 .2 .2 .2))
-       (base2 '(.4 .4 .4 .4))
-       ;(base3 '(.6 .6 .6 .6))
-       (rthm1 (wt len base))
-       (rthm2 (wt len (loop for i in base collect (/ i 2))))
-       (st1 (get-start-times rthm1))
-       (st2 (get-start-times rthm2))
-       (rthm3 (morph-patterns (list base1 base2) 1 nil t len (wt len 4 .3)))
-       (rthm4 (morph-patterns (list st1 st2) 1 nil t len (wt len 5 .3)))
-       (rthm5 (morph-patterns (list st1 st2) 1 nil t len (wt len 6 .3)))
-       (ls '()))
-  (setf rthm4 (get-durations rthm4))
-  (setf rthm5 (get-durations rthm5))
-  (setf ls (list rthm1 rthm2 rthm3 rthm4 rthm5))
-  (defun rthms2 (i rthm-index)
-    (let ((l (nth rthm-index ls)))
-      (nth (mod i (length l)) l))))
+      (nth (mod i (length l)) l)))
+  (defun rthm2pat0 (i rthm-index)
+    (let ((l (nth rthm-index ls1)))
+    (nth (mod i (length l)) l))))
 
 (let* ((pattern1 '(.2 .2 .2 .2 .2))
        (spattern1 '(0 0 0 0 5))
@@ -107,20 +126,18 @@
        (ls4 (wt (+ len 5) '(0 3 0.8 5 1) 0.5))
        (ls5 (wt len '(0 0.05 .1 .2 .35 .4)))
        (ls6 (wt (* len 2) (length (ly::data *pure-atoms*)))))
-  (defmacro i-from (ls &optional (len len))
-  `(nth (mod i ,len) ,ls))
   (defun sound-fun1 (i)
-    (i-from ls1 len1))
+    (nth (mod i len1) ls1))
   (defun sound-fun2 (i)
-    (i-from ls2 len2))
+    (nth (mod i len2) ls2))
   (defun sound-fun3 (i)
-    (i-from ls6 (* 2 len)))
+    (nth (mod i (* 2 len)) ls6))
   (defun rest-fun1 (i)
-    (i-from ls3))
+    (nth (mod i len) ls3))
   (defun rest-fun2 (i)
-    (i-from ls4))
+    (nth (mod i len) ls4))
   (defun srt-fun1 (i)
-    (+ 0.6 (i-from ls5))))
+    (+ 0.6 (nth (mod i len) ls5))))
 
 ;; ** Generation
 
@@ -132,8 +149,7 @@
 			  :output "/E/code/feedback/test3.wav"
 			  :channels 2 :play nil)
 ;;; times and durations
-  (let* ((start-times (get-start-times (first *form*)))
-	 (sec2-ly3-durations
+  (let* ((sec2-ly3-durations
 	  (get-durations-within (third *form*) (startn 1) (startn 2)))
 	 #+nil(sec2-ly3-start-times
 	       (get-start-times-within (third *form*) (startn 1) (startn 2)))
@@ -152,11 +168,49 @@
 	 (rhythm3
 	  (morph-patterns (list *pattern4* *pattern1*)
 			  dur2 nil (fibonacci-transition dur2))))
-    (declare (special start-times rhythm1 rhythm2 rhythm3))
+    (declare (special rhythm1 rhythm2 rhythm3))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 1
 ;;; TODO: how many channels?
 ;;; TODO: strategies to avoid random?
+    (with-mix () "/E/code/feedback//intro" 0
+      (play start end
+	    (sound (first (ly:data *quiet-atoms*)) (nth i (ly:data *quiet-atoms*)))
+	    (rhythm (rthms1 i 0) 1))
+
+      (loop for i from 0
+	 with time = start while (<= time end)
+	 for line = (/ (- time start) (- end start))
+	 for sound1 = (first (ly:data *quiet-atoms*))
+	 for sound2 = (nth i (ly:data *quiet-atoms*))
+	 for file1 = (ly::path sound1)
+	 for file2 = (ly::path sound2)
+	 for rhythm1 = (rthms1 i 0)
+	 for rhythm2 = 1
+	 for duration = nil
+	 collect (samp1 file1 time)
+	 collect (samp1 file2 time)
+	 do (incf time rhythm1))
+
+      (loop for i from 0
+	 with time1 = start
+	 with time2 = start
+	 for break1 = (<= time1 end)
+	 for break2 = (<= time2 end)
+	 while (or break1 break2)
+	 for line = (/ (- time start) (- end start))
+	 for sound1 = (first (ly:data *quiet-atoms*))
+	 for sound2 = (nth i (ly:data *quiet-atoms*))
+	 for file1 = (ly::path sound1)
+	 for file2 = (ly::path sound2)
+	 for rhythm1 = (rthms1 i 0)
+	 for rhythm2 = 1
+	 for duration = nil
+	 when break1 collect (samp1 file1 time :duration duration...)
+	 when break2 collect (samp1 file2 time :duration duration...)
+	 do (incf time1 rhythm1)
+	   (incf time2 rhythm2))
+      )
     (with-mix () "/E/code/feedback/intro" 0
       (fb-play (startn 0) (startn 2)
 	       (#'(lambda () (samp1 file time
@@ -193,40 +247,46 @@
     (with-mix () "/E/code/feedback/continuo" 0
       (fb-play (startn 1) (startn 2)
 	       (#'(lambda () (samp1 file time
-				    :duration duration
+				    ;:duration (/ rhythm (+ 1 (expt line 2)))
 				    :amp 0.9
 				    :amp-env *amp-env01*
-				    :srt (srt-fun1 i)
+				    :srt (if (< (rthms1 i 1) 0.3)
+					     1 (srt-fun1 i))
 				    :degree 0
 				    :printing nil)))
-	       :rhythm-fun (rthms1 i 1)
-	       ;;:duration (- 80 (* time 0.7))
-	       :sound (nth (sound-fun2 i)
-			   (reverse (ly::data *quiet-atoms*))))
+	       :rhythm-fun (rthms1 i 0);(rthm2pat0 i 0) ;
+	       :sound (if (< (rthms1 i 0) 0.3)
+			  (first (ly::data *percussive*))
+			  (nth (sound-fun2 i)
+			   (reverse (ly::data *quiet-atoms*)))))
       (fb-play (startn 1) (startn 2)
 	       (#'(lambda () (samp1 file time
-				    :duration duration
+				   ; :duration (/ rhythm (+ 1 (expt line 2)))
 				    :amp 0.9
 				    :amp-env *amp-env01*
-				    :srt (srt-fun1 i)
+				    :srt (if (< (rthms1 i 1) 0.3)
+					     1 (srt-fun1 i))
 				    :degree 45
 				    :printing nil)))
-	       :rhythm-fun (rthms1 i 2)
-	       ;;:duration (- 80 (* time 0.7))
-	       :sound (nth (sound-fun2 i)
-			   (reverse (ly::data *quiet-atoms*))))
+	       :rhythm-fun (rthms1 i 1); (rthm2pat0 i 1) ;
+	       :sound (if (< (rthms1 i 1) 0.3)
+			  (first (ly::data *percussive*))
+			  (nth (sound-fun2 i)
+			   (reverse (ly::data *quiet-atoms*)))))
       (fb-play (startn 1) (startn 2)
 	       (#'(lambda () (samp1 file time
-				    :duration duration
+				   ; :duration (/ rhythm (+ 1 (expt line 2)))
 				    :amp 0.9
 				    :amp-env *amp-env01*
-				    :srt (srt-fun1 i)
+				    :srt (if (< (rthms1 i 1) 0.3)
+					     1 (srt-fun1 i))
 				    :degree 90
 				    :printing nil)))
-	       :rhythm-fun (rthms1 i 3)
-	       ;;:duration (- 80 (* time 0.7))
-	       :sound (nth (sound-fun2 i)
-			   (reverse (ly::data *quiet-atoms*)))))
+	       :rhythm-fun (rthms1 i 2); (rthm2pat0 i 2) 
+	       :sound (if (< (rthms1 i 2) 0.3)
+			  (first (ly::data *percussive*))
+			  (nth (sound-fun2 i)
+			   (reverse (ly::data *quiet-atoms*))))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     (with-mix () "/E/code/feedback/beat" 0
       (fb-play (startn 1) (startn 2)
@@ -267,5 +327,19 @@
 				(ly::data *pure*))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ))
+
+
+
+(with-sound (:header-type clm::mus-riff :sampling-rate 48000
+			  :output "/E/code/feedback/fplay-test.wav"
+			  :channels 2 :play nil)
+  (fb-play 0 10 (#'(lambda () (samp1 file time))) :rhythm-list '(1 1)))
+
+(with-sound (:header-type clm::mus-riff :sampling-rate 48000
+			  :output "/E/code/feedback/fplay-test.wav"
+			  :channels 2 :play nil)
+  (fplay 0 10 (file "/E/Keks_Feedback/samples/percussive/polished/cookies_percussive_32.wav" "/E/Keks_Feedback/samples/percussive/polished/cookies_percussive_30.wav")
+	 (time 0 1)
+	 (rhythm (nth i '(1 2 1 2 1 2 1 2 1 2)) (nth i '(2 1 2 1 2 1 2 1 2 1 2)))))
 
 ;; EOF score.lsp
