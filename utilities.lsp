@@ -148,7 +148,7 @@
 				       (- ,,end-time ,,start-time)))))
       all-vars)
      ;;get user-defined variables in the mix
-     (merge-var-lists (reverse ,arg-list) all-vars)
+     (merge-var-lists ,arg-list all-vars)
      ;; add all other variables that are not set through arg-list
      (setf essential-names
 	   (append '((sfl *percussive*) (sound (first (ly::data sfl)))
@@ -160,6 +160,7 @@
 		   essential-names))
      ;; merge all variables into one list:
      (merge-var-lists essential-names all-vars)
+     ;(print all-vars)
      ;; get all neccessary variables:
      (append (get-loop-vars (reverse all-vars))
 	     ;; while:
@@ -191,6 +192,7 @@
 					   )))))
 	     ;; printing:
 	     `(do ;(format t "~&time: ~a" time) (format t "~&rhythm: ~a" rhythm)
+	       (format t "~&sound: ~a" (ly::id sound))
 	       ,@(loop for i from 1 to (1- (length (assoc 'time all-vars))) collect
 		      `(incf ,(name-var 'time i) ,(name-var-highest 'rhythm i all-vars)))
 	       )))) ;,(name-var-highest 'rhythm i all-vars))))))

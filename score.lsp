@@ -143,6 +143,7 @@
 
 ;;; Transitions:
 ;;; autoc - pitch estimation (Bret Battey) - autoc.ins ???
+;;; TODO: make sure two seperate fb calls produce the same result as one call
 ;;; TODO: some way of avoiding loading samples again and again
 ;;; TODO: Multichannel
 (with-sound (:header-type clm::mus-riff :sampling-rate 48000
@@ -173,78 +174,48 @@
 ;;; Teil 1
 ;;; TODO: how many channels?
 ;;; TODO: strategies to avoid random?
-    (with-mix () "/E/code/feedback//intro" 0
-      (play start end
-	    (sound (first (ly:data *quiet-atoms*)) (nth i (ly:data *quiet-atoms*)))
-	    (rhythm (rthms1 i 0) 1))
-
-      (loop for i from 0
-	 with time = start while (<= time end)
-	 for line = (/ (- time start) (- end start))
-	 for sound1 = (first (ly:data *quiet-atoms*))
-	 for sound2 = (nth i (ly:data *quiet-atoms*))
-	 for file1 = (ly::path sound1)
-	 for file2 = (ly::path sound2)
-	 for rhythm1 = (rthms1 i 0)
-	 for rhythm2 = 1
-	 for duration = nil
-	 collect (samp1 file1 time)
-	 collect (samp1 file2 time)
-	 do (incf time rhythm1))
-
-      (loop for i from 0
-	 with time1 = start
-	 with time2 = start
-	 for break1 = (<= time1 end)
-	 for break2 = (<= time2 end)
-	 while (or break1 break2)
-	 for line = (/ (- time start) (- end start))
-	 for sound1 = (first (ly:data *quiet-atoms*))
-	 for sound2 = (nth i (ly:data *quiet-atoms*))
-	 for file1 = (ly::path sound1)
-	 for file2 = (ly::path sound2)
-	 for rhythm1 = (rthms1 i 0)
-	 for rhythm2 = 1
-	 for duration = nil
-	 when break1 collect (samp1 file1 time :duration duration...)
-	 when break2 collect (samp1 file2 time :duration duration...)
-	 do (incf time1 rhythm1)
-	   (incf time2 rhythm2))
-      )
-    (with-mix () "/E/code/feedback/intro" 0
-      (fb-play (startn 0) (startn 2)
-	       (#'(lambda () (samp1 file time
-				    :duration duration
-				    :amp 0.9
-				    :amp-env *amp-env01*
-				    :srt (srt-fun1 i)
-				    :degree (random 90)
-				    :printing nil)))
-	       ;; duration of the sample + rest
-	       :rhythm-fun (+ (* (ly::duration sound) (/ 1 (srt-fun1 i)))
-			      (rest-fun2 i))
-	       ;;:duration (- 80 (* time 0.7))
-	       :sound (nth (sound-fun2 i)
-			   (reverse (ly::data *quiet-atoms*))))
-      (fb-play (startn 0) (startn 2)
-	       (#'(lambda () (samp1 file time
-				    :duration duration
-				    :amp (* line 0.7)
-				    :amp-env *amp-env01*
-				    :srt (srt-fun1 i)
-				    :degree 45
-				    :printing nil)))
-	       ;; duration of the sample + rest
-	       :rhythm-fun (+ (* (ly::duration (nth (sound-fun2 i)
-						    (reverse (ly::data
-							      *quiet-atoms*))))
-				 (/ 1 (srt-fun1 i)))
-			      (rest-fun2 i))
-	       :sound (nth (sound-fun1 i)
-			   (reverse (ly::data *quiet-atoms*)))))
+    (with-mix () "/E/code/feedback/intro-new1" 0
+      (fplay (startn 0) (startn 2)
+	     (amp .5)
+	     (amp-env *amp-env01*)
+	     (sound (nth (mod (sound-fun2 i) 18) (reverse (ly::data *quiet-atoms*))))
+	     (rhythm (nth (mod i 5) '(0 1 2 3 4)))
+	     (srt (srt-fun1 i))
+	     (degree 0))
+      (fplay (startn 0) (startn 2)
+	     (amp .8)
+	     (amp-env *amp-env01*)
+	     (sound (nth (mod (sound-fun1 i) 18) (reverse (ly::data *quiet-atoms*))))
+	     (rhythm (nth (mod i 3) '(.2 .3 .2)))
+	     (srt (srt-fun1 i))
+	     (degree 90)))
+    (with-mix () "/E/code/feedback/intro-new" 0
+      (fplay (startn 0) (startn 2)
+	     (amp .5 .8)
+	     (amp-env *amp-env01*)
+	     (sound (nth (mod (sound-fun2 i) 18) (reverse (ly::data *quiet-atoms*)))
+		    (nth (mod (sound-fun1 i) 18) (reverse (ly::data *quiet-atoms*))))
+	     (rhythm (nth (mod i 5) '(0 1 2 3 4)) (nth (mod i 3) '(.2 .3 .2)))
+	     (srt (srt-fun1 i))
+	     (degree 0 90)))
+    #+nil(with-mix () "/E/code/feedback/intro-new" 0
+      (fplay (startn 0) (startn 2)
+	     (amp 0.91 (* line 0.7))
+	     (amp-env *amp-env01*)
+	     (sound (nth (mod (sound-fun2 i) 18) (reverse (ly::data *quiet-atoms*)))
+		    (nth (mod (sound-fun1 i) 18) (reverse (ly::data *quiet-atoms*))))
+	     (rhythm (+ (* (ly::duration sound) (/ 1 (srt-fun1 i)))
+			(rest-fun2 i))
+		     (+ (* (ly::duration (nth (mod (sound-fun2 i) 18)
+					      (reverse (ly::data
+							*quiet-atoms*))))
+			   (/ 1 (srt-fun1 i)))
+			(rest-fun2 i)))
+	     (srt (srt-fun1 i))
+	     (degree (random 90) 45)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 2
-    (with-mix () "/E/code/feedback/continuo" 0
+    #+nil(with-mix () "/E/code/feedback/continuo" 0
       (fb-play (startn 1) (startn 2)
 	       (#'(lambda () (samp1 file time
 				    ;:duration (/ rhythm (+ 1 (expt line 2)))
@@ -288,7 +259,7 @@
 			  (nth (sound-fun2 i)
 			   (reverse (ly::data *quiet-atoms*))))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    (with-mix () "/E/code/feedback/beat" 0
+    #+nil(with-mix () "/E/code/feedback/beat" 0
       (fb-play (startn 1) (startn 2)
 	       (#'(lambda () (samp1 file time
 				    :duration (/ rhythm 3)
@@ -329,7 +300,7 @@
     ))
 
 
-
+#|
 (with-sound (:header-type clm::mus-riff :sampling-rate 48000
 			  :output "/E/code/feedback/fplay-test.wav"
 			  :channels 2 :play nil)
@@ -341,5 +312,6 @@
   (fplay 0 10 (file "/E/Keks_Feedback/samples/percussive/polished/cookies_percussive_32.wav" "/E/Keks_Feedback/samples/percussive/polished/cookies_percussive_30.wav")
 	 (time 0 1)
 	 (rhythm (nth i '(1 2 1 2 1 2 1 2 1 2)) (nth i '(2 1 2 1 2 1 2 1 2 1 2)))))
+|#
 
 ;; EOF score.lsp
