@@ -130,13 +130,15 @@
 ;; ** fplay-get-loop-vars
 ;;; uses #'get-loop-vars and then checks, wheter the variable names that are
 ;;; needed for fplay are already assigned. If not, it does so here.
+;;; no pretty error message if sound is nil and file doesnt get anything useful
 (defmacro fplay-get-loop-vars (start-time end-time arg-list)
   `(let* ((max-len (1- (apply #'max (mapcar #'length ,arg-list))))
 	  (rthm (assoc 'rhythm ,arg-list))
 	  (tim (assoc 'time ,arg-list))
+	  (snd (assoc 'sound ,arg-list))
 	  (essential-names '())
 	  (all-vars '()))
-     ;; add as many time, break and line variables as needed
+     ;; add as many 'time, 'break, and 'line variables as needed
      (merge-var-lists
       (list (loop for i from 0 below (max 2 (length rthm) (length tim)) collect
 		 (if (= 0 i) 'time
@@ -149,27 +151,36 @@
       all-vars)
      ;;get user-defined variables in the mix
      (merge-var-lists ,arg-list all-vars)
+     ;; add sufficient 'file variables
+     (merge-var-lists
+      (list (loop for i from 0 below (max 2 (length snd)) collect
+		 (if (= 0 i) 'file `(ly::path ,(name-var 'sound i)))))
+      all-vars)
      ;; add all other variables that are not set through arg-list
      (setf essential-names
 	   (append '((sfl *percussive*) (sound (first (ly::data sfl)))
-		     (file (ly::path sound)) (rhythm 1) (duration nil)
-		     (reflect nil) (reverse nil) (start 0) (end 0) (srt 1)
-		     (width 5) (srt-env '(0 0 100 0)) (srt-scaler 1.0) (amp 1.0)
-		     (amp-env '(0 1 100 1)) (degree 45) (distance 0)
-		     (rev-env '(0 1 100 1)) (rev-amt 0) (printing nil))
+		     (rhythm 1) (duration nil) (reflect nil) (reverse nil)
+		     (start 0) (end 0) (srt 1) (width 5) (srt-env '(0 0 100 0))
+		     (srt-scaler 1.0) (amp 1.0) (amp-env '(0 1 100 1))
+		     (degree 45) (distance 0) (rev-env '(0 1 100 1)) (rev-amt 0)
+		     (printing nil))
 		   essential-names))
      ;; merge all variables into one list:
      (merge-var-lists essential-names all-vars)
-     ;(print all-vars)
+     ;;(print all-vars)
      ;; get all neccessary variables:
      (append (get-loop-vars (reverse all-vars))
 	     ;; while:
 	     (append '(while)
-		     (list (loop for i from 0 below (max 2 (length rthm)) collect
-				(if (= 0 i) 'or (name-var 'break i)))))
+		     (list (loop for i from 0 below (max 2 (length rthm))
+			      collect (if (= 0 i) 'or (name-var 'break i)))))
+	     ;; error cases:
+	     `(do ,@(loop for i in '(rhythm file sfl) collect
+			 `(unless ,i
+			    (error "~&~a returned with nil in fplay" ',i))))
 	     ;; instrument calls:
 	     (loop for i from 1 to max-len append
-		  (list 'when (name-var 'break 1) 'collect
+		  (list 'when (name-var-highest 'break i all-vars) 'collect
 			`(funcall (lambda ()
 				    (samp1 ,(name-var-highest 'file i all-vars)
 					   ,(name-var-highest 'time i all-vars)
@@ -193,9 +204,10 @@
 	     ;; printing:
 	     `(do ;(format t "~&time: ~a" time) (format t "~&rhythm: ~a" rhythm)
 	       (format t "~&sound: ~a" (ly::id sound))
-	       ,@(loop for i from 1 to (1- (length (assoc 'time all-vars))) collect
-		      `(incf ,(name-var 'time i) ,(name-var-highest 'rhythm i all-vars)))
-	       )))) ;,(name-var-highest 'rhythm i all-vars))))))
+	       ,@(loop for i from 1 to (1- (length (assoc 'time all-vars)))
+		    collect `(incf ,(name-var 'time i)
+				   ,(name-var-highest 'rhythm i all-vars)))
+		)))) ;,(name-var-highest 'rhythm i all-vars))))))
 
 ;; ** fplay
 ;;; macro to call samp1 instrument
