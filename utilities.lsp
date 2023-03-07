@@ -143,13 +143,15 @@
 				       ,start-time)))
 	    (loop for i from 0 below (max 2 (length rthm) (length tim)) collect
 		 (if (= 0 i) 'condition (if con
-					    (nth (min (1- i) (length con)) (cdr con))
-					    `(<= ,(name-var 'time i) ,,end-time))))
+					    (nth (min (1- i) (length con))
+						 (cdr con))
+					    `(<= ,(name-var 'time i)
+						 ,,end-time))))
 	    (loop for i from 0 below (max 2 (length rthm) (length tim)) collect
 		 (if (= 0 i) 'line `(/ (- ,(name-var 'time i) ,,start-time)
 				       (- ,,end-time ,,start-time)))))
       all-vars)
-     ;;get user-defined variables in the mix
+     ;; get user-defined variables in the mix
      (merge-var-lists ,arg-list all-vars)
      ;; add sufficient 'file variables
      (merge-var-lists
@@ -167,7 +169,6 @@
 		   essential-names))
      ;; merge all variables into one list:
      (merge-var-lists essential-names all-vars)
-     ;;(print all-vars)
      ;; get all neccessary variables:
      (append (get-loop-vars (reverse all-vars))
 	     ;; while:
@@ -220,7 +221,11 @@
 ;;;  can be as long as you want. For every definition another variable is
 ;;;  created. For example: (rhythm 2 1) would create rhythm and define it as 2
 ;;;  and also rhythm2 and define it as 1. The variables can have any name, but
-;;;  some names already have a meaning within fplay.
+;;;  some names already have a meaning within fplay. fplay will create n calls
+;;;  to samp1, where n is the maximum length of definitions for a variable. So
+;;;  if you define 'rhythm as (rhythm 2 1 (nth (mod i 2) '(3 4))), at least
+;;;  three different calls to samp1 are generated. If some variables have less
+;;;  definitions than others, the last one will be used.
 ;;;  The following variables are always created internally by fplay and can also
 ;;;  be used within the variables the user defines. 'Time and 'condition can
 ;;;  also be altered.
