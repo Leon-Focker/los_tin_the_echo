@@ -31,7 +31,7 @@
 						:duration (* 60 7)
 						:smallest 2))
 			    (form (cdr (reverse (ly::data st)))))
-		       ;;(ly::visualize-structure st 1 "/E/code/feedback/structure_comp1.png")
+;;;(ly::visualize-structure st 1 "/E/code/feedback/structure_comp1.png")
 		       form))
 
 (defparameter *sections* (first *form*))
@@ -78,12 +78,12 @@
   (setf rthm3 (get-durations (append breaks rthm3)))
   (setf rthm4 (get-durations (append breaks rthm4)))
   (setf rthm5 (get-durations (append breaks rthm5)))
-  ;(setf rthm2pat01 (morph-patterns (list rthm3 pattern0) len nil t nil (wt 1000 25 20)))
-  ;(setf rthm2pat02 (morph-patterns (list rthm4 pattern0) len nil t nil (wt 1000 30 20)))
-  ;(setf rthm2pat03 (morph-patterns (list rthm5 pattern0) len nil t nil (wt 800 25 21)))
-  (setf rthm2pat01 (morph-patterns (list rthm3 pattern0) len nil t nil (fibonacci-transition 40)))
-  (setf rthm2pat02 (morph-patterns (list rthm4 pattern0) len nil t nil (fibonacci-transition 70)))
-  (setf rthm2pat03 (morph-patterns (list rthm5 pattern0) len nil t nil (fibonacci-transition 100)))
+  (setf rthm2pat01 (morph-patterns (list rthm3 pattern0) len nil t nil
+				   (fibonacci-transition 40)))
+  (setf rthm2pat02 (morph-patterns (list rthm4 pattern0) len nil t nil
+				   (fibonacci-transition 70)))
+  (setf rthm2pat03 (morph-patterns (list rthm5 pattern0) len nil t nil
+				   (fibonacci-transition 100)))
   (setf ls (list rthm3 rthm4 rthm5))
   (setf ls1 (list rthm2pat01 rthm2pat02 rthm2pat03))
   (defun rthms1 (i rthm-index)
@@ -173,20 +173,18 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 1
     (with-mix () "/E/code/feedback/intro" 0
-      (fplay (startn 0) (startn 2)
-	     (amp 0.9 (* line 0.7))
-	     (amp-env *amp-env01*)
-	     (sound (nth (mod (sound-fun2 i) 18) (reverse (ly::data *quiet-atoms*)))
-		    (nth (mod (sound-fun1 i) 18) (reverse (ly::data *quiet-atoms*))))
-	     (rhythm (+ (* (ly::duration sound) (/ 1 (srt-fun1 i)))
-			(rest-fun2 i))
-		    (+ (* (ly::duration (nth (mod (sound-fun2 i) 18)
-					      (reverse (ly::data
-							*quiet-atoms*))))
-			   (/ 1 (srt-fun1 i)))
-			(rest-fun2 i)))
-	     (srt (srt-fun1 i))
-	     (degree 0 90)))
+      (let* ((sound-list (reverse (ly::data *quiet-atoms*))))
+	(fplay (startn 0) (startn 2)
+	       (amp 0.9 (* line 0.7))
+	       (amp-env *amp-env01*)
+	       (sound (nth (mod (sound-fun2 i) 18) sound-list)
+		      (nth (mod (sound-fun1 i) 18) sound-list))
+	       (rhythm (+ (* (ly::duration sound) (/ 1 (srt-fun1 i)))
+			  (rest-fun2 i))
+		       (+ (* (ly::duration sound2) (/ 1 (srt-fun1 i)))
+			  (rest-fun2 i)))
+	       (srt (srt-fun1 i))
+	       (degree 0 90))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 2
     (with-mix () "/E/code/feedback/continuo" 0

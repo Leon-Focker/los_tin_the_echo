@@ -66,10 +66,10 @@
 ;;; see play-rhythm for actual use
 (defmacro dynamic-collect (&rest rest)
   `(loop for i in (quote ,rest) collect 'collect collect i))
-(defmacro dynamic-collect-instruments (instrument-calls)
-  `(loop for i in ,instrument-calls collect 'collect collect `(funcall ,i)))
 
 ;; ** name-var
+;;; name a variable after scheme:
+;;; i = 1 => name, i = 2 => name2, i = 3 => name3 ...
 (defmacro name-var (name i)
   `(if (<= ,i 1) ,name (read-from-string (format nil "~a~a" ,name ,i))))
 
@@ -81,20 +81,18 @@
      (if (<= n 1) ,name (read-from-string
 			  (format nil "~a~a" ,name n)))))
 
-#+nil(defmacro name-var (name i)
-  `(if (= ,i 1) ,name (intern (format nil "~a~a" ,name ,i))))
-
 ;; ** get-loop-vars
 ;;; return a list with statements of type 'for var-name = var-def'
 ;;; arg-list - list of lists, these contain a name for a variable
 ;;;  as first element, then how those varable is defined in the loop
 ;;;  if there is more than one definition (eg. the sublist is longer
 ;;;  than 2 elements, (1- length) variables will be created. The first
-;;; variable is always name var-name, after that: var-name2, var-name3...
+;;;  variable is always called var-name, after that: var-name2, var-name3...
+;;; There is one exception: when var-name = time, 'with is used, not 'for.
 ;;; EXAMPLE
 #|
-(get-loop-vars '((rythm (nth i ls)) () (sound 4 5)))
-=> (FOR RYTHM = (NTH I LS) FOR SOUND = 4 FOR SOUND2 = 5)
+(get-loop-vars '((time 5) (rythm (nth i ls)) () (sound 4 5)))
+=> (WITH TIME = 5 FOR RYTHM = (NTH I LS) FOR SOUND = 4 FOR SOUND2 = 5)
 |#
 (defmacro get-loop-vars (arg-list)
   `(loop for var in ,arg-list append
@@ -107,44 +105,46 @@
 		  len var-name))
 	  (when (> len 1)
 	    (loop for i from 1 and var-def in (cdr var)
-		 ,@(dynamic-collect (if (and (> (length (string var-name)) 3)
-					     (equal "TIME" (subseq (string var-name) 0 4)))
-					'with 'for)
-				    (name-var var-name i)
-				    '=
-				    var-def))))))
-
-;; ** fplay-test-for-var-name
-#+nil(defmacro fplay-test-for-var-name (ls name &optional (init-form 1))
-  `(if (and (> (length (string ,name)) 3)
-	    (equal "TIME" (subseq (string ,name) 0 4)))
-       (list 'with ,name '= ,init-form)
-       (unless (assoc ,name ,ls)
-	 (list 'for ,name '= ,init-form))))
+		 ,@(dynamic-collect
+		    (if (and (> (length (string var-name)) 3)
+			     (equal "TIME" (subseq (string var-name) 0 4)))
+			'with
+			'for)
+		    (name-var var-name i)
+		    '=
+		    var-def))))))
 
 ;; ** merge-var-lists
+;;; push elements from list 'from into list 'into, but only if no sublist with
+;;; the same first element is already in 'into.
 (defmacro merge-var-lists (from into)
   `(loop for el in ,from unless (assoc (first el) ,into)
       do (push el ,into)))
 
 ;; ** fplay-get-loop-vars
-;;; uses #'get-loop-vars and then checks, wheter the variable names that are
-;;; needed for fplay are already assigned. If not, it does so here.
+;;; this is basically the body of fplay:
+;;; collects all variable names and definitions that are needed for fplay
+;;; and then generates them using #'get-loop-vars. There's probably still a few
+;;; bugs that I haven't discovered yet.
 ;;; no pretty error message if sound is nil and file doesnt get anything useful
 (defmacro fplay-get-loop-vars (start-time end-time arg-list)
   `(let* ((max-len (1- (apply #'max (mapcar #'length ,arg-list))))
 	  (rthm (assoc 'rhythm ,arg-list))
 	  (tim (assoc 'time ,arg-list))
+	  (con (assoc 'condition ,arg-list))
 	  (snd (assoc 'sound ,arg-list))
 	  (essential-names '())
 	  (all-vars '()))
-     ;; add as many 'time, 'break, and 'line variables as needed
+     ;; add as many 'time, 'condition, and 'line variables as needed
      (merge-var-lists
       (list (loop for i from 0 below (max 2 (length rthm) (length tim)) collect
-		 (if (= 0 i) 'time
-		     (if tim (nth (min (1- i) (length tim)) (cdr tim)) ,start-time)))
+		 (if (= 0 i) 'time (if tim
+				       (nth (min (1- i) (length tim)) (cdr tim))
+				       ,start-time)))
 	    (loop for i from 0 below (max 2 (length rthm) (length tim)) collect
-		 (if (= 0 i) 'break `(<= ,(name-var 'time i) ,,end-time)))
+		 (if (= 0 i) 'condition (if con
+					    (nth (min (1- i) (length con)) (cdr con))
+					    `(<= ,(name-var 'time i) ,,end-time))))
 	    (loop for i from 0 below (max 2 (length rthm) (length tim)) collect
 		 (if (= 0 i) 'line `(/ (- ,(name-var 'time i) ,,start-time)
 				       (- ,,end-time ,,start-time)))))
@@ -172,45 +172,87 @@
      (append (get-loop-vars (reverse all-vars))
 	     ;; while:
 	     (append '(while)
-		     (list (loop for i from 0 below (max 2 (length rthm))
-			      collect (if (= 0 i) 'or (name-var 'break i)))))
+		     (list (loop for i from 0 below (max 2 (length rthm)) collect
+				(if (= 0 i) 'or (name-var 'condition i)))))
 	     ;; error cases:
 	     `(do ,@(loop for i in '(rhythm file sfl) collect
 			 `(unless ,i
 			    (error "~&~a returned with nil in fplay" ',i))))
 	     ;; instrument calls:
 	     (loop for i from 1 to max-len append
-		  (list 'when (name-var-highest 'break i all-vars) 'collect
+		  (list 'when (name-var-highest 'condition i all-vars) 'collect
 			`(funcall (lambda ()
-				    (samp1 ,(name-var-highest 'file i all-vars)
-					   ,(name-var-highest 'time i all-vars)
-					   :duration ,(name-var-highest 'duration i all-vars)
-					   :reflect ,(name-var-highest 'reflect i all-vars)
-					   :reverse ,(name-var-highest 'reverse i all-vars)
-					   :start ,(name-var-highest 'start i all-vars)
-					   :end ,(name-var-highest 'end i all-vars)
-					   :srt ,(name-var-highest 'srt i all-vars)
-					   :width ,(name-var-highest 'width i all-vars)
-					   :srt-env ,(name-var-highest 'srt-env i all-vars)
-					   :srt-scaler ,(name-var-highest 'srt-scaler i all-vars)
-					   :amp ,(name-var-highest 'amp i all-vars)
-					   :amp-env ,(name-var-highest 'amp-env i all-vars)
-					   :degree ,(name-var-highest 'degree i all-vars)
-					   :distance ,(name-var-highest 'distance i all-vars)
-					   :rev-env ,(name-var-highest 'rev-env i all-vars)
-					   :rev-amt ,(name-var-highest 'rev-amt i all-vars)
-					   :printing ,(name-var-highest 'printing i all-vars)
-					   )))))
+		 (samp1 ,(name-var-highest 'file i all-vars)
+			,(name-var-highest 'time i all-vars)
+			:duration ,(name-var-highest 'duration i all-vars)
+			:reflect ,(name-var-highest 'reflect i all-vars)
+			:reverse ,(name-var-highest 'reverse i all-vars)
+			:start ,(name-var-highest 'start i all-vars)
+			:end ,(name-var-highest 'end i all-vars)
+			:srt ,(name-var-highest 'srt i all-vars)
+			:width ,(name-var-highest 'width i all-vars)
+			:srt-env ,(name-var-highest 'srt-env i all-vars)
+			:srt-scaler ,(name-var-highest 'srt-scaler i all-vars)
+			:amp ,(name-var-highest 'amp i all-vars)
+			:amp-env ,(name-var-highest 'amp-env i all-vars)
+			:degree ,(name-var-highest 'degree i all-vars)
+			:distance ,(name-var-highest 'distance i all-vars)
+			:rev-env ,(name-var-highest 'rev-env i all-vars)
+			:rev-amt ,(name-var-highest 'rev-amt i all-vars)
+			:printing ,(name-var-highest 'printing i all-vars)
+			)))))
 	     ;; printing:
 	     `(do ;(format t "~&time: ~a" time) (format t "~&rhythm: ~a" rhythm)
 	       (format t "~&sound: ~a" (ly::id sound))
+	       ;; increasing the different times:
 	       ,@(loop for i from 1 to (1- (length (assoc 'time all-vars)))
 		    collect `(incf ,(name-var 'time i)
 				   ,(name-var-highest 'rhythm i all-vars)))
-		)))) ;,(name-var-highest 'rhythm i all-vars))))))
+		))))
 
 ;; ** fplay
-;;; macro to call samp1 instrument
+;;; A very handy Macro to call samp1 instrument for use in clm
+;;; start-time - the initial value for 'time (see below)
+;;; end-time - when 'time is > end-time, the loop stops.
+;;; REST: All following arguments should be of type list and will create lexical
+;;;  variables. Like for #'let the first element should be the name for the
+;;;  variable and the next argument is how it shall be defined. However the list
+;;;  can be as long as you want. For every definition another variable is
+;;;  created. For example: (rhythm 2 1) would create rhythm and define it as 2
+;;;  and also rhythm2 and define it as 1. The variables can have any name, but
+;;;  some names already have a meaning within fplay.
+;;;  The following variables are always created internally by fplay and can also
+;;;  be used within the variables the user defines. 'Time and 'condition can
+;;;  also be altered.
+;;;  time - this is given to samp1 as time argument and will be increased by
+;;;   'rhythm at the end of each iteration. 'time usually starts at 'start-time.
+;;;  condition - while this is t, the loop keeps going.
+;;;   Usually is (<= time end-time)
+;;;  line - this is basically defined as (/ passed-time entire-time), but
+;;;   depends on start-time and end-time. I treat it as the 'x value for any
+;;;   function that wants to know the relative time within fplay. If you
+;;;   don't modify 'time this should always be within 0 and 1.
+;;;  These variable-names have a predefined meaning within fplay but cannot be
+;;;  used within the definition of user-defined variables unless they are
+;;;  previously defined by the user:
+;;;  file - this is given to samp1 as its file argument and should be a path
+;;;   pointing to a soundfile. Its initial definition is (ly::path sound)
+;;;  sound - this is a variable designed to hold a stored-file (see :layers).
+;;;   Initially defined as (first (ly::data sfl)).
+;;;  sfl - a stored-file-list (see :layers). This can be thought of as the
+;;;   'sample-library' that is used. But can also be totally ignored.
+;;;  rhythm - the time between this call to samp1 and the next one. 'Time
+;;;   will be increased by 'rhythm at the end of each iteration. However
+;;;   this is not neccessarily how lond the sample will be played.
+;;;  If you want to access one of samp1's key-argument you can do so by
+;;;  creating a variable with the same name. For example:
+;;;  duration - how long the sample will be played. This is passed to samp1 as
+;;;   the :duration key-argument. Initially defined as nil - the sample will
+;;;   be played entirely.
+;;;
+;;; For exemplary uses see score.lsp+
+;;;
+;;; TODO: sanity checks for arguments
 (defmacro fplay (start-time end-time &rest rest)
   `(loop for i from 0 ,@(fplay-get-loop-vars start-time end-time rest)))
 
