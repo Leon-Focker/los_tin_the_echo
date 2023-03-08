@@ -1,9 +1,8 @@
-
 ;; * Utilities for feedback
 (in-package :fb)
 
 ;; ** get-start-times
-;;; gat start times from a list of durations
+;;; get start times from a list of durations
 (defun get-start-times (list-of-durations)
   (append '(0) (loop for i in list-of-durations sum i into sum collect sum)))
 
@@ -68,6 +67,9 @@
 (defmacro dynamic-collect (&rest rest)
   `(loop for i in (quote ,rest) collect 'collect collect i))
 
+(defmacro dynamic-collect-ls (rest)
+  `(loop for i in ,rest collect 'collect collect i))
+
 ;; ** name-var
 ;;; name a variable after scheme:
 ;;; i = 1 => name, i = 2 => name2, i = 3 => name3 ...
@@ -92,11 +94,12 @@
 ;;;  if there is more than one definition (eg. the sublist is longer
 ;;;  than 2 elements, (1- length) variables will be created. The first
 ;;;  variable is always called var-name, after that: var-name2, var-name3...
+;;;  The definition can also be a string and will.
 ;;; There is one exception: when var-name = time, 'with is used, not 'for.
 ;;; EXAMPLE
 #|
-(get-loop-vars '((time 5) (rythm (nth i ls)) () (sound 4 5)))
-=> (WITH TIME = 5 FOR RYTHM = (NTH I LS) FOR SOUND = 4 FOR SOUND2 = 5)
+(get-loop-vars '((time 5) (duration) (rhythm (nth i ls)) (sound 2 "4 then 5")))
+=> (WITH TIME = 5 FOR RHYTHM = (NTH I LS) FOR SOUND = 2 FOR SOUND2 = 4 THEN 5)
 |#
 (defmacro get-loop-vars (arg-list)
   `(progn
@@ -105,20 +108,30 @@
      (loop for var in ,arg-list
 	for len = (length var)
 	for var-name = (first var)
-	for flag = (and (> (length (string var-name)) 3)
-			(equal "TIME" (subseq (string var-name) 0 4)))
+	for substring = (when (> (length (string var-name)) 3)
+			  (subseq (string var-name) 0 4))
+	for flag = (or (equal "TIME" substring))
 	do (unless (symbolp var-name)
 	     (error "invalid name for a variable: ~a" var-name))
 	  (when (> len 10)
 	    (warn "are you sure about ~a different instances of ~a?"
 		  len var-name))
 	append (when (> len 1)
-		 (loop for i from 1 and var-def in (cdr var)
+		 (loop for i from 1 for var-def in (cdr var)
+		    for def = (if (stringp var-def)
+				  (string-to-list var-def)
+				  (list var-def))
 		      ,@(dynamic-collect
 			 (if flag 'with 'for)
 			 (name-var var-name i)
 			 '=
-			 var-def))))))
+			 (if (stringp var-def)
+			     (first (string-to-list var-def))
+			     var-def))))
+	append (first (when (> len 1)
+		 (loop for i from 1 for var-def in (cdr var)
+		    when (stringp var-def)
+		    collect (cdr (string-to-list var-def))))))))
 
 ;; ** merge-var-lists
 ;;; push elements from list 'from into list 'into, but only if no sublist with
