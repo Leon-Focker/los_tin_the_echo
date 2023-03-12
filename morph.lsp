@@ -18,9 +18,10 @@
 
 ;; * mod1
 (defun mod1 (x)
-  (cond ((= 0 x) 0)
-	((= 0 (mod x 1)) 1)
-	(t (mod x 1))))
+  (let ((x (rational x)))
+    (cond ((= 0 x) 0)
+	  ((= 0 (mod x 1)) 1)
+	  (t (mod x 1)))))
 
 ;; * morph-patterns
 ;;; morph between two patterns, using a morphing-function,
@@ -128,21 +129,24 @@
   (unless (> duration 0)
     (error "for morph-patterns, duration must be greater than 0: ~a" duration))
   (let* ((ratio-sum (loop for i in transition-ratios sum i))
-	 (trans-durs (loop for i in transition-ratios collect (* (/ i ratio-sum) duration)))
-	 (trans-starts (append '(0) (loop for i in trans-durs sum i into sum collect sum))))
+	 (trans-durs (loop for i in transition-ratios
+			collect (* (/ i ratio-sum) duration)))
+	 (trans-starts (append '(0) (loop for i in trans-durs
+				       sum i into sum collect sum))))
     (loop for i from 0
-       for sum = 0 then (+ sum rhythm)
+       for sum = 0 then (rational (+ sum rhythm))
        for n = (decider (/ sum duration) trans-durs)
-       for interp = (/ (- sum (nth n trans-starts))
-		       (- (nth (1+ n) trans-starts) (nth n trans-starts)))
+       for interp = (rational (/ (- sum (nth n trans-starts))
+				 (- (nth (1+ n) trans-starts)
+				    (nth n trans-starts))))
        for pattern1 = (nth n patterns)
        for pattern2 = (nth (1+ n) patterns)
        for event1 = (nth (mod i (length pattern1)) pattern1)
        for event2 = (nth (mod i (length pattern2)) pattern2)
-       for rhythm = (+ (* (- 1 (mod1 interp))
-			  (if (listp event1) (car event1) event1))
-		       (* (mod1 interp)
-			  (if (listp event2) (car event2) event2)))
+       for rhythm = (rational (+ (* (- 1 (mod1 interp))
+				    (if (listp event1) (car event1) event1))
+				 (* (mod1 interp)
+				    (if (listp event2) (car event2) event2))))
        for event = (if (listp (if (>= (mod1 interp) 0.5)
 				  event2
 				  event1))
