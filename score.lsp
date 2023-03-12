@@ -97,13 +97,13 @@
 (let* ((pattern1 '(.2 .2 .2 .2 .2))
        (spattern1 '(0 0 0 0 5))
        (pattern2 '(.3 .3 .3 .1))
-       (spattern2 '(0 0 0 5))
+       ;;(spattern2 '(0 0 0 5))
        (pattern3 (morph-patterns (list pattern1 pattern2) 60 nil t nil
 				 (fibonacci-transition 120)))
        (pattern4 (morph-patterns (list pattern1 pattern2) 60 nil t nil
 				 (fibonacci-transition 80)))
        (len1 (length pattern1))
-       (len2 (length pattern2))
+       ;;(len2 (length pattern2))
        (len3 (length pattern3))
        (len4 (length pattern4)))
   (defun pattern1 (i)
@@ -126,7 +126,8 @@
        (ls3 (procession len '(0 3 0.8 5)))
        (ls4 (wt (+ len 5) '(0 2.5 0.8 5 1) 0.5))
        (ls5 (wt len '(0 0.05 .1 .2 .35 .4)))
-       (ls6 (wt (* len 2) (length (ly::data *pure-atoms*)))))
+       (ls6 (wt len '(0 0.08 .15 .23 .3 .45)))
+       (ls7 (wt (* len 2) (length (ly::data *pure-atoms*)))))
   #+nil(loop for i in '(7 9 13) do
        (incf (nth i ls4) 20))
   (defun sound-fun1 (i)
@@ -134,13 +135,15 @@
   (defun sound-fun2 (i)
     (nth (mod i len2) ls2))
   (defun sound-fun3 (i)
-    (nth (mod i (* 2 len)) ls6))
+    (nth (mod i (* 2 len)) ls7))
   (defun rest-fun1 (i)
     (nth (mod i len) ls3))
   (defun rest-fun2 (i)
     (nth (mod i len) ls4))
   (defun srt-fun1 (i)
-    (+ 0.6 (nth (mod i len) ls5))))
+    (+ 0.6 (nth (mod i len) ls5)))
+  (defun srt-fun2 (i)
+    (+ 0.6 (nth (mod i len) ls6))))
 
 ;; ** Generation
 
@@ -151,7 +154,7 @@
 ;;; TODO: Multichannel
 (with-sound (:header-type clm::mus-riff :sampling-rate 48000
 			  :output "/E/code/feedback/test3.wav"
-			  :channels 2 :play nil)
+			  :channels 2 :play nil :scaled-to 0.95)
 ;;; times and durations
   (let* ((sec2-ly3-durations
 	  (get-durations-within (third *form*) (startn 1) (startn 2)))
@@ -207,8 +210,10 @@
 	     (sounds (reverse (ly::data *quiet-atoms*)))
 	     (last last-sound last-sound2 last-sound3) ; what if called on i = 0
 	     ;;(new-sound (nth (sound-fun2 i) sounds))
-	     (add (if (>= time (+ (startn 1) 15)) (* (- 1 (expt line 0.3)) 5) 0))
-	     (rhythm (+ add (rthms1 i 0)) (+ add (rthms1 i 1)) (+ add (rthms1 i 2)))
+	     (add (if (>= time (+ (startn 1) 15))
+		      (* (- 1 (expt line 0.3)) 5) 0))
+	     (rhythm (+ add (rthms1 i 0)) (+ add (rthms1 i 1))
+		     (+ add (rthms1 i 2)))
 	     (test (< rhythm 0.35) (< rhythm2 0.35) (< rhythm3 0.35))
 	     (sound (if test last (nth (sound-fun2 i) sounds))
 		    (if test2 last (nth (sound-fun2 i) sounds))
@@ -223,15 +228,18 @@
 		      (if test2 (+ counter2 .05) 0)
 		      (if test3 (+ counter3 .05) 0))
 	     (start (if test (+ (* (ly::duration sound)
-				   (/ (ly::peak-index sound) (ly::total-samples sound)))
+				   (/ (ly::peak-index sound)
+				      (ly::total-samples sound)))
 				counter)
 			0)
 		    (if test2 (+ (* (ly::duration sound2)
-				    (/ (ly::peak-index sound2) (ly::total-samples sound2)))
+				    (/ (ly::peak-index sound2)
+				       (ly::total-samples sound2)))
 				 counter2)
 			0)
 		    (if test3 (+ (* (ly::duration sound3)
-				    (/ (ly::peak-index sound3) (ly::total-samples sound3)))
+				    (/ (ly::peak-index sound3)
+				       (ly::total-samples sound3)))
 				 counter3)
 			0))
 	     (last-sound sound sound2 sound3)
@@ -242,6 +250,20 @@
 		  (if test2 1 (srt-fun1 i))
 		  (if test3 1 (srt-fun1 i)))
 	     (degree 0 45 90)
+	     (printing t)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    (with-mix () "/E/code/feedback/continuo2" 0
+      (fplay (+ (startn 1) 5) (startn 2)
+	     (sounds (reverse (ly::data *quiet-atoms*)))
+	     (add (if (>= time (+ (startn 1) 15))
+		      (* (- 1 (expt line 0.3)) 5) 0))
+	     (srt (srt-fun2 i))
+	     (rhythm (+ add (rthms1 i 0) (* (- srt 0.75) 1/3)))
+	     (sound (nth (if (>= time 173) (sound-fun2 i) (sound-fun1 i))
+			 sounds))
+	     (amp (if (> line .42) 0.9 0))
+	     (amp-env *amp-env01*)
+	     (degree 45)
 	     (printing t)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     #+nil(with-mix () "/E/code/feedback/beat" 0
@@ -257,39 +279,25 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 3
     (with-mix () "/E/code/feedback/beat2" 0
-      (fplay (startn 2) (startn 3)
+      (fplay (- (startn 2) 1.95) (startn 3)
 	     (amp 0.7)
 	     (amp-env '(0 0  5 1  90 1  100 0))
 	     (srt 10)
-	     (sound (nth (spattern1 i) (reverse (ly::data *pure-atoms*))))
+	     (sound (nth (spattern1 i) (reverse (ly::data *noise*))))
 	     (rhythm (* (pattern3 i) 0.5) (* (pattern4 i) .5))
-	     (duration (/ rhythm 3))
+	     (duration rhythm);(/ rhythm 3))
 	     (degree 30 60)
 	     (printig t)))
     (with-mix () "/E/code/feedback/beat3" 0
-      (fplay (startn 2) (startn 3)
+      (fplay (- (startn 2) 1.95) (startn 3)
 	     (amp 0.7)
 	     (amp-env '(0 0  5 1  90 1  100 0))
 	     (srt 10)
-	     (sound (nth (spattern1 i) (reverse (ly::data *percussive*))))
+	     (sound (nth (spattern1 i) (reverse (ly::data *noise*))))
 	     (rhythm (* (pattern3 i) 0.125) (* (pattern4 i) .125))
-	     (duration (/ rhythm 3))
+	     (duration rhythm);(/ rhythm 3))
 	     (degree 90 0)
 	     (printig t)))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; TODO: make x y z dependend on time in rhythm
-    #+nil(with-mix () "/E/code/feedback/build-pure" 0
-	   (fb-play (startn 1) (startn 2)
-		    (#'(lambda() (samp1 file time
-					:duration duration
-		  			:amp 0.5
-					:amp-env *amp-env01*
-					:srt 1
-					:degree (random 90))))
-		    :rhythm-fun (+ 5 (* (expt line 3) 25))
-		    :duration (- (startn 2)  time)
-		    :sound (nth (round (+ (* (sin (* (expt line 0.3) 5)) 0.5) 0.5))
-				(ly::data *pure*))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ))
 
