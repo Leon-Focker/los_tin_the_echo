@@ -60,7 +60,13 @@
        for mem = (member i index-list)
        when mem collect (nth (- len (length mem)) newelt-list)
        collect el)))
-	   
+
+;; ** dry-wet
+(defun dry-wet (dry wet mix)
+  (let ((mix (min 1 (max mix 0))))
+    (+ (* wet mix)
+       (* dry (- 1 mix)))))
+
 ;; ** dynamic-collect
 ;;; give any amount of arguments to a collect in a loop in a macro :)
 ;;; see fplay-get-loop-vars for actual use
@@ -167,13 +173,13 @@
 		   (if (= 0 i)
 		       'time
 		       (if tim
-			   (nth (min (1- i) (length tim)) (cdr tim))
+			   (nth (1- (min i (1- (length tim)))) (cdr tim))
 			   ,start-time)))
 	      (loop for i from 0 below total-times collect
 		   (if (= 0 i)
 		       'condition
 		       (if con
-			   (nth (min (1- i) (length con))
+			   (nth (1- (min i (1- (length con))))
 				(cdr con))
 			   `(<= ,(name-var 'time i)
 				,,end-time))))
@@ -235,14 +241,19 @@
 	;; printing:
 	`(do 
 	  ,@(loop for i from 1 to max-len 
-	       when (nth (min (1- i) (length print)) (cdr print)) collect
+	       when (nth (max 0 (1- (min i (1- (length print))))) (cdr print))
+	       collect
 		 `(when ,(name-var-highest 'condition i all-vars)
 		    (format t "~&time: ~a"
 			    ,(name-var-highest 'time i all-vars))
 		    (format t "~&sound: ~a"
 			    (ly::id ,(name-var-highest 'sound i all-vars)))
 		    (format t "~&duration: ~a"
-			    ,(name-var-highest 'duration i all-vars))))
+			    ,(name-var-highest 'duration i all-vars))
+		    (format t "~&srate-conversion: ~a"
+			    ,(name-var-highest 'srt i all-vars))
+		    (format t "~&degree: ~a"
+			    ,(name-var-highest 'degree i all-vars))))
 	  ;; increasing the different times:
 	  ,@(loop for i from 1 to (1- (length (assoc 'time all-vars)))
 	       collect `(incf ,(name-var 'time i)

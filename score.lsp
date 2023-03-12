@@ -19,7 +19,7 @@
 						  (5 ((2 4 5 3)))
 						  (6 ((1)))
 						  (7 ((3))))
-						'((1 1)
+						'((1 1.25)
 						  (2 1.5)
 						  (3 0.2)
 						  (4 1.3)
@@ -28,10 +28,10 @@
 						  (7 0.95))
 						:id 'form
 						:type 'compartmentalise
-						:duration (* 60 7)
+						:duration (* 60 7.5)
 						:smallest 2))
 			    (form (cdr (reverse (ly::data st)))))
-;;;(ly::visualize-structure st 1 "/E/code/feedback/structure_comp1.png")
+(ly::visualize-structure st 1 "/E/code/feedback/structure_comp1.png")
 		       form))
 
 (defparameter *sections* (first *form*))
@@ -51,7 +51,7 @@
 (defun wt (length levels &optional (e 0.8))
   (window-transitions length levels e 1))
 
-;; rhythms of type 1
+;; collection of patterns, not very tidy
 (let* ((len 30)
        (rthm1 (get-start-times (wt len '(0.8 2 3.6 6.9 2.5))))
        (rthm2 (get-start-times (wt len '(0.8 2 3.6 6.9 2.5) 0.3)))
@@ -68,7 +68,7 @@
 				     (- (second (first *form*)) 10))
 		  indices
 		  (reverse (loop for i from 0 below (length indices) collect
-		       (loop repeat (expt 2.1 i) collect .2)))))))
+		       (loop repeat (+ (expt 2.1 i) 3) collect .2)))))))
        (pattern0 '(.3 .3 .3 .3 .3))
        (rthm2pat01 '())
        (rthm2pat02 '())
@@ -93,6 +93,7 @@
     (let ((l (nth rthm-index ls1)))
     (nth (mod i (length l)) l))))
 
+;; some rhythm-based patterns
 (let* ((pattern1 '(.2 .2 .2 .2 .2))
        (spattern1 '(0 0 0 0 5))
        (pattern2 '(.3 .3 .3 .1))
@@ -114,7 +115,7 @@
   (defun pattern4 (i)
     (nth (mod i len4) pattern4)))
 
-;; collection of some different lists
+;; Some patterns, primarily for intro
 (let* ((len 30)
        (quiet-len (length (ly::data *quiet-atoms*)))
        (ls1 (avoid-repetition
@@ -123,9 +124,11 @@
        (ls2 (avoid-repetition (wt len quiet-len)))
        (len2 (length ls2))
        (ls3 (procession len '(0 3 0.8 5)))
-       (ls4 (wt (+ len 5) '(0 3 0.8 5 1) 0.5))
+       (ls4 (wt (+ len 5) '(0 2.5 0.8 5 1) 0.5))
        (ls5 (wt len '(0 0.05 .1 .2 .35 .4)))
        (ls6 (wt (* len 2) (length (ly::data *pure-atoms*)))))
+  #+nil(loop for i in '(7 9 13) do
+       (incf (nth i ls4) 20))
   (defun sound-fun1 (i)
     (nth (mod i len1) ls1))
   (defun sound-fun2 (i)
@@ -171,51 +174,108 @@
 			  dur2 nil (fibonacci-transition dur2))))
     (declare (special rhythm1 rhythm2 rhythm3))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Teil 1
+;;; Teil 1, Intro
     (with-mix () "/E/code/feedback/intro" 0
       (let* ((sound-list (reverse (ly::data *quiet-atoms*))))
-	(fplay (startn 0) (startn 2)
-	       (amp 0.9 (* line 0.7))
-	       (amp-env *amp-env01*)
+        (fplay (startn 0) (startn 2)
+	       (srt (srt-fun1 i))
+	       (amp-env (env-fun1 (- 80 (* 70 (expt line .5)))))
 	       (sound (nth (mod (sound-fun2 i) 18) sound-list)
 		      (nth (mod (sound-fun1 i) 18) sound-list))
-	       (rhythm (+ (* (ly::duration sound) (/ 1 (srt-fun1 i)))
-			  (rest-fun2 i))
-		       (+ (* (ly::duration sound2) (/ 1 (srt-fun1 i)))
-			  (rest-fun2 i)))
-	       (srt (srt-fun1 i))
+	       (duration (min (/ (ly::duration sound) srt) 5)
+			 (min (/ (ly::duration sound2) srt)))
+	       (amp-mult (/ 1 (ly::peak sound)) (/ 1 (ly::peak sound2)))
+	       (amp-fade (if (> time (startn 1))
+			     (expt (/ (- time (startn 1))
+					   (- (startn 2) (startn 1)))
+					2)
+			     1))
+	       (amp (* (dry-wet 0.9 amp-mult (* line 0.3)) amp-fade)
+		    (* (dry-wet (* line 0.7) amp-mult2 (* line2 0.3)) amp-fade))
+	       (mult (+ 1 (* (expt line 0.3) 2)))
+	       (rhythm (+ duration
+			  (min (* (rest-fun2 i) mult) 5))
+		       (+ duration2
+			  (min (* (rest-fun2 i) mult) 5)))
 	       (degree 0 90))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;; Teil 2
+;;; Part 2
+;;; Building on Intro
+;;; new srt-funs
     (with-mix () "/E/code/feedback/continuo" 0
-      (fplay (startn 1) (startn 2)
-	     (amp 0.9)
-	     (amp-env *amp-env01*)
-	     (sound (if (< (rthms1 i 0) 0.35)
-			(first (ly::data *percussive*))
-			(nth (sound-fun2 i)
-			     (reverse (ly::data *quiet-atoms*))))
-		    (if (< (rthms1 i 1) 0.35)
-			(first (ly::data *percussive*))
-			(nth (sound-fun2 i)
-			     (reverse (ly::data *quiet-atoms*))))
-		    (if (< (rthms1 i 2) 0.35)
-			(first (ly::data *percussive*))
-			(nth (sound-fun2 i)
-			     (reverse (ly::data *quiet-atoms*)))))
+      (fplay (+ (startn 1) 5) (startn 2)
+	     (sounds (reverse (ly::data *quiet-atoms*)))
+	     (last last-sound last-sound2 last-sound3) ; what if called on i = 0
+	     ;;(new-sound (nth (sound-fun2 i) sounds))
+	     (add (if (>= time (+ (startn 1) 15)) (* (- 1 (expt line 0.3)) 5) 0))
+	     (rhythm (+ add (rthms1 i 0)) (+ add (rthms1 i 1)) (+ add (rthms1 i 2)))
+	     (test (< rhythm 0.35) (< rhythm2 0.35) (< rhythm3 0.35))
+	     (sound (if test last (nth (sound-fun2 i) sounds))
+		    (if test2 last (nth (sound-fun2 i) sounds))
+		    (if test3 last (nth (sound-fun2 i) sounds)))
+	     (amp (if test (/ 0.2 (ly::peak sound)) 0.9)
+		  (if test2 (/ .2 (ly::peak sound2)) 0.9)
+		  (if test3 (/ .2 (ly::peak sound3)) 0.9))
+	     (amp-env (if test '(0 0  5 1  80 0.8  100 0) *amp-env01*)
+		      (if test2 '(0 0  5 1  80 0.8  100 0) *amp-env01*)
+		      (if test3 '(0 0  5 1  80 0.8  100 0) *amp-env01*))
+	     (counter (if test (+ counter .05) 0)
+		      (if test2 (+ counter2 .05) 0)
+		      (if test3 (+ counter3 .05) 0))
+	     (start (if test (+ (* (ly::duration sound)
+				   (/ (ly::peak-index sound) (ly::total-samples sound)))
+				counter)
+			0)
+		    (if test2 (+ (* (ly::duration sound2)
+				    (/ (ly::peak-index sound2) (ly::total-samples sound2)))
+				 counter2)
+			0)
+		    (if test3 (+ (* (ly::duration sound3)
+				    (/ (ly::peak-index sound3) (ly::total-samples sound3)))
+				 counter3)
+			0))
 	     (last-sound sound sound2 sound3)
-	     (rhythm (rthms1 i 0) (rthms1 i 1) (rthms1 i 2))
-	     (srt (if (< (rthms1 i 1) 0.3) 1 (srt-fun1 i)))
-	     (degree 0 45 90)))
+	     (duration (if test (* rhythm 0.8))
+		       (if test2 (* rhythm2 0.8))
+		       (if test3 (* rhythm3 0.8)))
+	     (srt (if test 1 (srt-fun1 i))
+		  (if test2 1 (srt-fun1 i))
+		  (if test3 1 (srt-fun1 i)))
+	     (degree 0 45 90)
+	     (printing t)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    (with-mix () "/E/code/feedback/beat" 0
+    #+nil(with-mix () "/E/code/feedback/beat" 0
       (fplay (startn 1) (startn 2)
 	     (amp 0.7)
-	     (sound (nth (spattern1 i) (reverse (ly::data *percussive*)))
-		    (nth (spattern1 i) (reverse (ly::data *percussive*))))
+	     (amp-env '(0 0  5 1  90 1  100 0))
+	     (srt 10)
+	     (sound (nth (spattern1 i) (reverse (ly::data *pure-atoms*))))
 	     (rhythm (pattern3 i) (pattern4 i))
 	     (duration (/ rhythm 3))
-	     (degree 30 60)))
+	     (degree 30 60)
+	     (printig t)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Teil 3
+    (with-mix () "/E/code/feedback/beat2" 0
+      (fplay (startn 2) (startn 3)
+	     (amp 0.7)
+	     (amp-env '(0 0  5 1  90 1  100 0))
+	     (srt 10)
+	     (sound (nth (spattern1 i) (reverse (ly::data *pure-atoms*))))
+	     (rhythm (* (pattern3 i) 0.5) (* (pattern4 i) .5))
+	     (duration (/ rhythm 3))
+	     (degree 30 60)
+	     (printig t)))
+    (with-mix () "/E/code/feedback/beat3" 0
+      (fplay (startn 2) (startn 3)
+	     (amp 0.7)
+	     (amp-env '(0 0  5 1  90 1  100 0))
+	     (srt 10)
+	     (sound (nth (spattern1 i) (reverse (ly::data *percussive*))))
+	     (rhythm (* (pattern3 i) 0.125) (* (pattern4 i) .125))
+	     (duration (/ rhythm 3))
+	     (degree 90 0)
+	     (printig t)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; TODO: make x y z dependend on time in rhythm
     #+nil(with-mix () "/E/code/feedback/build-pure" 0

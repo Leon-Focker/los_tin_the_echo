@@ -70,15 +70,15 @@
   ;;(visualize (print (loop for i below length collect (funcall morphing-function i))))
   (let* ((rhythms-list (patterns-to-rhythms-list patterns)))
     (loop for i from 0
-       for sum = 0 then (float (+ sum (if (= 0 rhythm) 1 rhythm)) 0.0d0)
+       for sum = 0 then (rational (+ sum (if (= 0 rhythm) 1 rhythm)))
        for key = (round (ly::mirrors (funcall morphing-function sum)
 				     0 (1- (length patterns))))
        for pattern = (nth key patterns)
        for rhythms = (nth key rhythms-list)
        ;; position relative to the pattern
-       for index = (let ((pat-dur (float (loop for i in rhythms sum i) 0.0d0)))
+       for index = (let ((pat-dur (rational (loop for i in rhythms sum i))))
 		     (if (not (= pat-dur 0))
-			 (decider (rescale (+ (mod sum pat-dur))
+			 (decider (rescale (mod sum pat-dur)
 ;;; to combat float-errors, maybe add (expt 10.0d0 -8)
 					   0
 					   pat-dur
@@ -97,7 +97,7 @@
        ;; add a difference, to bring sequence to its max length
        ;; if the rhythm-value was a rest, the added difference will
        ;; too be a rest
-	 (let* ((difference (rationalize (- duration sum))))
+	 (let* ((difference (rational (- duration sum))))
 	   (unless (sc::equal-within-tolerance difference 0)
 	     (cond (overlap-duration (setf ls (append ls (list event))))
 		   ((atom event) (setf ls (append ls (list difference))))
@@ -154,7 +154,7 @@
        ;; add a difference, to bring sequence to its max length
        ;; if the rhythm-value was a rest, the added difference will
        ;; too be a rest
-	 (let* ((difference (rationalize (- duration sum))))
+	 (let* ((difference (rational (- duration sum))))
 	   (unless (sc::equal-within-tolerance difference 0)
 	     (cond (overlap-duration (setf ls (append ls (list event))))
 		   ((atom event) (setf ls (append ls (list difference))))
@@ -162,91 +162,8 @@
        ;; return the final rhythm sequence:
 	 (return ls))))
 
-;; OLD CODE
-
-#+nil(defun interpolate-patterns (patterns duration &optional overlap-duration)
-  (unless (typep patterns 'list)
-    (error "morph-patterns needs patterns to be a list: ~a" patterns))
-  (unless (> duration 0)
-    (error "for morph-patterns, duration must be greater than 0: ~a" duration))
-  (loop for i from 0
-     for sum = 0 then (+ sum rhythm)
-     for interp = (* (/ sum duration) (1- (length patterns)))
-     for pattern1 = (nth (floor interp) patterns)
-     for pattern2 = (nth (ceiling interp) patterns)
-     for event1 = (nth (mod i (length pattern1)) pattern1)
-     for event2 = (nth (mod i (length pattern2)) pattern2)
-     for rhythm = (+ (* (- 1 (mod1 interp))
-			(if (listp event1) (car event1) event1))
-		     (* (mod1 interp)
-			(if (listp event2) (car event2) event2)))
-     for event = (if (listp (if (>= (mod1 interp) 0.5)
-				event2
-				event1))
-		     (list rhythm)
-		     rhythm)
-     until (>= (+ sum rhythm) duration)
-     collect event into ls
-     finally
-     ;; add a difference, to bring sequence to its max length
-     ;; if the rhythm-value was a rest, the added difference will
-     ;; too be a rest
-       (let* ((difference (rationalize (- duration sum))))
-	 (unless (sc::equal-within-tolerance difference 0)
-	   (cond (overlap-duration (setf ls (append ls (list event))))
-		 ((atom event) (setf ls (append ls (list difference))))
-		 (t (setf ls (append ls (list (list difference))))))))
-     ;; return the final rhythm sequence:
-       (return ls)))
-
-;; * non-linear-interpolate - OBSOLETE AND NONFUNCTIONAL
-;;; when more than two patterns are interpolated with interpolate-patterns
-;;; the transitions all have the same length. This function will avoid that.
-;;; there will not be a non-linear-morph, since morph-patterns can just take
-;;; different morphing-functions as argument
-#+nil(defun non-linear-interpolate (patterns transition-ratios duration
-				    &optional overlap-duration)
-       (let* ((patterns-len (length patterns))
-	      (trans-len (length transition-ratios))
-	      (ratio-sum (loop for i in transition-ratios sum i))
-	      (optimal-len 0)
-	      (res-sum 0)
-	      (result '()))
-	 (unless (= (1- patterns-len) trans-len)
-	   (error "different number of pattern-transitions and transition-ratios ~
-              in non-linear-interpolate: ~a, ~a"
-		  (1- patterns-len) trans-len))
-	 (loop for i from 0
-	    for pattern1 in patterns
-	    for pattern2 in (cdr patterns)
-	    for ratio = (/ (nth i transition-ratios) ratio-sum)
-	    for seq = (interpolate-patterns
-		       (list pattern1 pattern2)
-		       (* ratio duration)
-		       t)
-	    for seq-len = (length seq)
-	    do (setf result
-		     (append result
-			     (if overlap-duration
-				 seq
-				 (if (<= res-sum optimal-len)
-				     seq
-				     (subseq seq 0 (1- seq-len)))))
-		     optimal-len
-		     (+ optimal-len (* ratio duration))
-		     res-sum
-		     (loop for i in seq sum i))
-	    finally (return (if overlap-duration
-				result
-				(let ((dif (rationalize (- duration res-sum))))
-				  (unless (sc::equal-within-tolerance difference 0)
-				    result)))))))
-
-
-
 (export '(slippery-chicken
 	  morph-patterns
-	  interpolate-patterns
-	  non-linear-interpolate))
+	  interpolate-patterns))
 
 ;; EOF morph.lsp

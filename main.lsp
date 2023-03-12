@@ -38,12 +38,12 @@
 	  clm::add-sound
 	  clm::samp1))
 
-(defparameter *soundfiles-stored* nil)
+(defparameter *re-analyse-soundfiles* nil)
 
 ;; ** load
 
 ;; load soundfiles and patterns
-(unless *soundfiles-stored* (load "/E/code/feedback/soundfiles.lsp"))
+(load "/E/code/feedback/soundfiles.lsp")
 (load "/E/code/feedback/patterns.lsp")
 (load "/E/code/feedback/utilities.lsp")
 (load "/E/code/feedback/transitions.lsp")

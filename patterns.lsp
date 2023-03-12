@@ -14,6 +14,14 @@
    (loop for i from 0 to 80 collect i collect (expt (/ i 80) 0.3))
    (loop for i from 81 to 100 collect i collect (expt (/ (- 100 i) 20) 0.3))))
 
+(defun env-fun1 (breakpoint)
+  (let ((bp (max 0 (min 100 (round breakpoint)))))
+    (append
+     (loop for i from 0 to bp
+	collect i collect (expt (/ i bp) 0.3))
+     (loop for i from (1+ bp) to 100
+	collect i collect (expt (/ (- 100 i) (- 100 bp)) 0.3)))))
+
 (defparameter *amp-env02*
   '(0 0  100 0))
 
