@@ -25,10 +25,12 @@
 	  ly::make-stored-file
 	  ly::make-stored-file-list
 	  ly::store-file-in-list
-	  ly::compartmentalise	  ly::visualize-structure
+	  ly::compartmentalise
+	  ly::visualize-structure
 	  ly::decide-for-snd-file
 	  ly::get-sub-list-of-closest
 	  ly::folder-to-stored-file-list
+	  ly::mirrors
 	  clm::with-sound
 	  clm::with-mix
 	  clm::sound-let

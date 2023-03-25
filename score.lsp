@@ -46,6 +46,9 @@
 (defun startn (index)
   (nth index (start-times 0)))
 
+;;; some custom startns
+(defparameter startn2 (- (startn 2) 1.95))
+
 ;; ** material
 
 (defun wt (length levels &optional (e 0.8))
@@ -145,12 +148,38 @@
   (defun srt-fun2 (i)
     (+ 0.6 (nth (mod i len) ls6))))
 
+;; break rhythms
+(let* ((pt1 '(.05))
+       (pt2 '(.1))
+       (pt3 '(1))
+       (pt4 '(.5))
+       ;;(pt5 '(.02))
+       (dur (- (startn 3) (startn 2)))
+       #|(ls1 (morph-patterns `(,pt3 ,pt1) dur nil t nil))
+       (ls2 (morph-patterns `(,pt3 ,pt2) dur nil t nil))
+       (ls3 (morph-patterns `(,pt4 ,pt2) dur nil t nil (wt 20 2)))
+       (ls4 (morph-patterns `(,pt4 ,pt1) dur nil t nil (wt 20 2)))|#
+       (ls1 (interpolate-patterns (fibonacci-transitions 6 `(,pt3 ,pt1)) dur t))
+       (ls2 (interpolate-patterns (fibonacci-transitions 8 `(,pt3 ,pt2)) dur t))
+       (ls3 (interpolate-patterns (wt 7 `(,pt4 ,pt2) 1) dur t))
+       (ls4 (interpolate-patterns (wt 7 `(,pt4 ,pt1)) dur t))
+       (len1 (length ls1))
+       (len2 (length ls2))
+       (len3 (length ls3))
+       (len4 (length ls4)))
+  (defun br-rthms1 (i)
+    (nth (mod i len1) ls1))
+  (defun br-rthms2 (i)
+    (nth (mod i len2) ls2))
+  (defun br-rthms3 (i)
+    (nth (mod i len3) ls3))
+  (defun br-rthms4 (i)
+    (nth (mod i len4) ls4)))
+
 ;; ** Generation
 
 ;;; Transitions:
 ;;; autoc - pitch estimation (Bret Battey) - autoc.ins ???
-;;; TODO: make sure two seperate fb calls produce the same result as one call
-;;; TODO: some way of avoiding loading samples again and again
 ;;; TODO: Multichannel
 (with-sound (:header-type clm::mus-riff :sampling-rate 48000
 			  :output "/E/code/feedback/test3.wav"
@@ -175,22 +204,23 @@
 	 (rhythm3
 	  (morph-patterns (list *pattern4* *pattern1*)
 			  dur2 nil (fibonacci-transition dur2))))
-    (declare (special rhythm1 rhythm2 rhythm3))
+    (declare (special rhythm1 rhythm2 rhythm3 startn2))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 1, Intro
     (with-mix () "/E/code/feedback/intro" 0
       (let* ((sound-list (reverse (ly::data *quiet-atoms*))))
-        (fplay (startn 0) (startn 2)
+        (fplay (startn 0) startn2
 	       (srt (srt-fun1 i))
 	       (amp-env (env-fun1 (- 80 (* 70 (expt line .5)))))
 	       (sound (nth (mod (sound-fun2 i) 18) sound-list)
 		      (nth (mod (sound-fun1 i) 18) sound-list))
-	       (duration (min (/ (ly::duration sound) srt) 5)
-			 (min (/ (ly::duration sound2) srt)))
+	       (stop-in (- startn2 time) (- startn2 time2))
+	       (duration (min (/ (ly::duration sound) srt) 5 stop-in)
+			 (min (/ (ly::duration sound2) srt) stop-in2))
 	       (amp-mult (/ 1 (ly::peak sound)) (/ 1 (ly::peak sound2)))
 	       (amp-fade (if (> time (startn 1))
 			     (expt (/ (- time (startn 1))
-					   (- (startn 2) (startn 1)))
+					   (- startn2 (startn 1)))
 					2)
 			     1))
 	       (amp (* (dry-wet 0.9 amp-mult (* line 0.3)) amp-fade)
@@ -206,7 +236,7 @@
 ;;; Building on Intro
 ;;; new srt-funs
     (with-mix () "/E/code/feedback/continuo" 0
-      (fplay (+ (startn 1) 5) (startn 2)
+      (fplay (+ (startn 1) 5) startn2
 	     (sounds (reverse (ly::data *quiet-atoms*)))
 	     (last last-sound last-sound2 last-sound3) ; what if called on i = 0
 	     ;;(new-sound (nth (sound-fun2 i) sounds))
@@ -243,13 +273,22 @@
 				 counter3)
 			0))
 	     (last-sound sound sound2 sound3)
-	     (duration (if test (* rhythm 0.8))
-		       (if test2 (* rhythm2 0.8))
-		       (if test3 (* rhythm3 0.8)))
 	     (srt (if test 1 (srt-fun1 i))
 		  (if test2 1 (srt-fun1 i))
 		  (if test3 1 (srt-fun1 i)))
-	     (degree 0 45 90)
+	     (stop-in (- startn2 time 2)
+		      (- startn2 time2 2)
+		      (- startn2 time3 2))
+	     (duration (min (if test (* rhythm 0.8)
+				(/ (ly::duration sound) srt))
+			    stop-in)
+		       (min (if test2 (* rhythm2 0.8)
+				(/ (ly::duration sound2) srt2))
+			    stop-in2)
+		       (min (if test3 (* rhythm3 0.8)
+				(/ (ly::duration sound3) srt3))
+			    stop-in3))
+	     (degree 0 (+ 45 (* (- (mod i 2) .5) 90 (- 1 line2))) 90)
 	     (printing t)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     (with-mix () "/E/code/feedback/continuo2" 0
@@ -261,10 +300,26 @@
 	     (rhythm (+ add (rthms1 i 0) (* (- srt 0.75) 1/3)))
 	     (sound (nth (if (>= time 173) (sound-fun2 i) (sound-fun1 i))
 			 sounds))
+	     (duration (min (/ (ly::duration sound) srt)
+			    (- (startn 2) time)))
 	     (amp (if (> line .42) 0.9 0))
 	     (amp-env *amp-env01*)
 	     (degree 45)
 	     (printing t)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    (with-mix () "/E/code/feedback/bass" 0
+      (let ((file "/E/Keks_Feedback/samples/distorted/cookies_distorted_03.wav")
+	    (file2 "/E/Keks_Feedback/samples/distorted/cookies_distorted_01a.wav")
+	    (time (* 0.792 (startn 2)))
+	    (time2 (* 0.8059 (startn 2)))
+	    (srt 0.023181288)
+	    (srt2 0.0487395))
+	(samp1 file time :amp 1.3 :amp-env *amp-env01* :srt srt :degree 45
+	       :duration (min (/ (ly::soundfile-duration file) srt)
+			      (- startn2 time)))
+	(samp1 file2 time2 :amp-env *amp-env01* :srt srt2 :degree 45
+	       :duration (min (/ (ly::soundfile-duration file2) srt2)
+			      (- startn2 time2)))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     #+nil(with-mix () "/E/code/feedback/beat" 0
       (fplay (startn 1) (startn 2)
@@ -278,26 +333,55 @@
 	     (printig t)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 3
-    (with-mix () "/E/code/feedback/beat2" 0
-      (fplay (- (startn 2) 1.95) (startn 3)
-	     (amp 0.7)
-	     (amp-env '(0 0  5 1  90 1  100 0))
-	     (srt 10)
-	     (sound (nth (spattern1 i) (reverse (ly::data *noise*))))
-	     (rhythm (* (pattern3 i) 0.5) (* (pattern4 i) .5))
-	     (duration rhythm);(/ rhythm 3))
-	     (degree 30 60)
-	     (printig t)))
-    (with-mix () "/E/code/feedback/beat3" 0
-      (fplay (- (startn 2) 1.95) (startn 3)
-	     (amp 0.7)
-	     (amp-env '(0 0  5 1  90 1  100 0))
-	     (srt 10)
-	     (sound (nth (spattern1 i) (reverse (ly::data *noise*))))
-	     (rhythm (* (pattern3 i) 0.125) (* (pattern4 i) .125))
-	     (duration rhythm);(/ rhythm 3))
-	     (degree 90 0)
-	     (printig t)))
+    (with-mix () "/E/code/feedback/break" 0
+      (fplay startn2 (startn 3)
+	     (amp 0.5)
+	     (sound (nth 0 (reverse (ly::data *noise*)))
+		    (nth 1 (reverse (ly::data *noise*)))
+		    (nth 2 (reverse (ly::data *noise*)))
+		    (nth 3 (reverse (ly::data *noise*))))
+	     (rhythm (br-rthms1 i)
+		     (br-rthms2 i)
+		     (br-rthms3 i)
+		     (br-rthms4 i))
+	     (duration (rationalize (* rhythm (- 1 (expt line 2))))
+		       (rationalize (* rhythm2 (- 1 (expt line2 2))))
+		       (rationalize (* rhythm3 (- 1 (expt line3 2))))
+		       (rationalize (* rhythm4 (- 1 (expt line4 2)))))
+	     (start "0 then (+ start duration)"
+		    "0 then (ly::mirrors (+ start duration2) 0 4)"
+		    "0 then (ly::mirrors (+ start duration3) 0 2.5)"
+		    "0 then (ly::mirrors (+ start duration4) 0 4.5)")
+	     (amp-env *amp-env01*)
+	     #+nil(amp-env (if (< rhythm .2)
+			  '(0 0  5 1  90 1  100 0)
+			  '(0 0  99 1  100 0)))
+	     (degl (* 90 line 2) (* 90 line2 2) (* 90 line3 2) (* 90 line4 2))
+	     (degree (ly::mirrors (+ 0 degl) 0 90) (ly::mirrors (- 30 degl2) 0 90)
+		     (ly::mirrors (- 60 degl3) 0 90) (ly::mirrors (+ 90 degl4) 0 90))
+	     (printing nil)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Teil 4
+;;; Intro again for now :PP
+    (with-mix () "/E/code/feedback/mid" 0
+      (let* ((sound-list (reverse (ly::data *quiet-atoms*))))
+        (fplay (startn 3) (startn 4)
+	       (srt (srt-fun1 i))
+	       (amp-env (env-fun1 (- 80 (* 70 (expt line .5)))))
+	       (sound (nth (mod (sound-fun2 i) 18) sound-list)
+		      (nth (mod (sound-fun1 i) 18) sound-list))
+	       (stop-in (- (startn 4) time) (- (startn 4) time2))
+	       (duration (min (/ (ly::duration sound) srt) 5 stop-in)
+			 (min (/ (ly::duration sound2) srt) stop-in2))
+	       (amp-mult (/ 1 (ly::peak sound)) (/ 1 (ly::peak sound2)))
+	       (amp (dry-wet 0.9 amp-mult (* line 0.3))
+		    (dry-wet (* line 0.7) amp-mult2 (* line2 0.3)))
+	       (mult (+ 1 (* (expt line 0.3) 2)))
+	       (rhythm (+ duration
+			  (min (* (rest-fun2 i) mult) 5))
+		       (+ duration2
+			  (min (* (rest-fun2 i) mult) 5)))
+	       (degree 0 90))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ))
 
