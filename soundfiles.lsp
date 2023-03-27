@@ -56,6 +56,33 @@
 (unless *re-analyse-soundfiles*
   (setf *pure-atoms* (ly::load-from-file *pure-atoms-txt*)))
 
+;; ** distorted
+
+(defparameter *distorted* (make-stored-file-list 'distorted nil))
+(defparameter *distorted-txt* "/E/code/feedback/distorted.txt")
+(unless (probe-file *distorted-txt*) (setf *re-analyse-soundfiles* t))
+(when *re-analyse-soundfiles*
+  (folder-to-stored-file-list
+   *distorted*
+   "/E/Keks_Feedback/samples/distorted/"
+   :analyse t
+   :auto-map nil
+   :auto-scale-mapping nil
+   :remap nil
+   ;;:fft-size 4096
+   :f1 #'(lambda (sf) (/ (log (/ (+ (ly::dominant-frequency sf)
+				    (ly::centroid sf))
+				 2))
+			 12000))
+   :f2 #'(lambda (sf) (* (expt (ly::transient sf) 0.7)
+			 0.6))
+   :f3 #'(lambda (sf) (- 1 (expt (ly::smoothness sf)
+				 0.5))))
+  (ly::store-in-text-file *distorted* *distorted-txt*))
+
+(unless *re-analyse-soundfiles*
+  (setf *distorted* (ly::load-from-file *distorted-txt*)))
+
 ;; ** noise
 (defparameter *noise* (make-stored-file-list 'noise nil))
 (defparameter *noise-txt* "/E/code/feedback/noise.txt")
