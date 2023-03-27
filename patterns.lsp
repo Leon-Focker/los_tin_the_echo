@@ -17,10 +17,21 @@
 (defun env-fun1 (breakpoint)
   (let ((bp (max 0 (min 100 (round breakpoint)))))
     (append
-     (loop for i from 0 to bp
-	collect i collect (expt (/ i bp) 0.3))
+     (if (= bp 0) '(0 1)
+	 (loop for i from 0 to bp
+	    collect i collect (expt (/ i bp) 0.3)))
      (loop for i from (1+ bp) to 100
 	collect i collect (expt (/ (- 100 i) (- 100 bp)) 0.3)))))
+
+;; base should be between 0 and 1
+(defun env-expt (pow &optional (base 0) reverse? flip?)
+  (unless (<= 0 base 1)
+    (warn "base should be between or equal to 0 and 1 but is: ~a" base))
+  (loop for i from 0 to 100
+     for val = (expt (/ (if reverse? (- 100 i) i) 100) pow)
+     collect i collect
+       (+ (* (- 1 base) (if flip? (- 1 val) val))
+	  base)))
 
 (defparameter *amp-env02*
   '(0 0  100 0))
