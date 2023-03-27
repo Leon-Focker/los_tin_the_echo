@@ -198,11 +198,11 @@
 	all-vars)
        ;; add all other variables that are not set through arg-list
        (merge-var-lists
-	'((sfl *percussive*) (sound (first (ly::data sfl))) (rhythm 1)
+	'((sfl *percussive*) (sound (first (ly::data sfl))) (rhythm 1000)
 	  (duration nil) (reflect nil) (reverse nil) (start 0) (end 0) (srt 1)
 	  (width 5) (srt-env '(0 0 100 0)) (srt-scaler 1.0) (amp 1.0)
 	  (amp-env '(0 1 100 1)) (degree 45) (distance 0) (rev-env '(0 1 100 1))
-	  (rev-amt 0) (printing nil))
+	  (rev-amt 0) (channel 0) (printing nil))
 	all-vars)
        ;; get all neccessary variables:
        (append
@@ -222,7 +222,7 @@
 	(loop for i from 1 to max-len append
 	     (list 'when (name-var-highest 'condition i all-vars) 'collect
 		   `(funcall (lambda ()
-	        (samp1 ,(name-var-highest 'file i all-vars)
+	        (samp0 ,(name-var-highest 'file i all-vars)
 		       ,(name-var-highest 'time i all-vars)
 		       :duration ,(name-var-highest 'duration i all-vars)
 		       :reflect ,(name-var-highest 'reflect i all-vars)
@@ -239,6 +239,7 @@
 		       :distance ,(name-var-highest 'distance i all-vars)
 		       :rev-env ,(name-var-highest 'rev-env i all-vars)
 		       :rev-amt ,(name-var-highest 'rev-amt i all-vars)
+		       :channel ,(name-var-highest 'channel i all-vars)
 		       :printing nil
 		       )))))
 	;; printing:
