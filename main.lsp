@@ -12,7 +12,7 @@
 (load (cl::os-path "/E/code/feedback/morph.lsp"))
 
 ;; Michael Edwards samp1 instrument
-(load (compile-file "/E/code/feedback/samp1.ins"))
+(load (compile-file "/E/code/feedback/samp0.ins"))
 
 ;; use all in one package
 (defpackage :feedback
@@ -38,7 +38,8 @@
 	  clm::*CLM-MIX-CALLS*
 	  clm::*CLM-MIX-OPTIONS*
 	  clm::add-sound
-	  clm::samp1))
+	  ;;clm::samp1
+	  clm::samp0))
 
 (defparameter *re-analyse-soundfiles* nil)
 

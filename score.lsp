@@ -182,7 +182,7 @@
 ;;; autoc - pitch estimation (Bret Battey) - autoc.ins ???
 ;;; TODO: Multichannel
 (with-sound (:header-type clm::mus-riff :sampling-rate 48000
-			  :output "/E/code/feedback/test3.wav"
+			  :output "/E/code/feedback/just_feed_it.wav"
 			  :channels 2 :play nil :scaled-to 0.95)
 ;;; times and durations
   (let* ((sec2-ly3-durations
@@ -331,9 +331,9 @@
 	     (printing nil)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 4
-;;; Intro again for now :PP
+;;; Condinuo again, but not quiet
     (with-mix () "/E/code/feedback/mid" 0
-      (let* ((sound-list (reverse (ly::data *quiet-atoms*))))
+      (let* ((sound-list (reverse (ly::data *pure-atoms*))))
         (fplay (startn 3) (startn 4)
 	       (srt (srt-fun1 i))
 	       (amp-env (env-fun1 (- 80 (* 70 (expt line .5)))))
@@ -352,6 +352,65 @@
 			  (min (* (rest-fun2 i) mult) 5)))
 	       (degree 0 90))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ))
+;;; Teil 5
+;;; Intro again, but distorted ;)
+    (with-mix () "/E/code/feedback/last" 0
+      (sound-let
+	  ((dist ()			;(:scaled-to 0.95)
+		 (fplay (startn 4) (startn 5)
+			(sounds (reverse (ly::data *distorted*)))
+			(add (if (>= time (+ (startn 1) 15))
+				 (* (- 1 (expt line 0.3)) 5) 0))
+			(rhythm (+ add (rthms1 i 0)) (+ add (rthms1 i 1))
+				(+ add (rthms1 i 2)))
+			(sound (nth (sound-fun2 i) sounds)
+			       (nth (sound-fun2 i) sounds)
+			       (nth (sound-fun2 i) sounds))
+			(amp .3) ;;(amp (- .8 (* (expt line .1) 0.7)))
+			(amp-env (env-fun1 (+ 80 (* line 20))))
+			(srt (srt-fun1 i) (srt-fun1 i) (srt-fun1 i))
+			(stop-in (- (startn 5) time 2)
+				 (- (startn 5) time2 2)
+				 (- (startn 5) time3 2))
+			(duration (min (/ (ly::duration sound) srt)
+				       stop-in)
+				  (min (/ (ly::duration sound2) srt2)
+				       stop-in2)
+				  (min (/ (ly::duration sound3) srt3)
+				       stop-in3))
+			(degree 0 (+ 45 (* (- (mod i 2) .5) 90 (- 1 line2))) 90)
+			(printing nil))))
+	(fplay (startn 4) (- (startn 5) 3)
+	       (amp 8)
+	       (file dist)
+	       (duration (- (startn 5) 3 (startn 4)))
+	       (start (startn 4))
+	       (channel 0 1)
+	       (amp-env (env-expt .1 .1 nil t))
+	       (degree 0 90))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Teil 6
+;;; Intro is Outro :P
+    (with-mix () "/E/code/feedback/outro" 0
+      (let* ((sound-list (reverse (ly::data *quiet-atoms*))))
+        (fplay (- (startn 5) 3) (startn 6)
+	       (srt (srt-fun1 i))
+	       (amp-env (env-fun1 (- 80 (* 70 (expt line .5)))))
+	       (sound (nth (mod (sound-fun2 i) 18) sound-list)
+		      (nth (mod (sound-fun1 i) 18) sound-list))
+	       (stop-in (- (startn 6) time) (- (startn 6) time2))
+	       (duration (min (/ (ly::duration sound) srt) 5 stop-in)
+			 (min (/ (ly::duration sound2) srt) stop-in2))
+	       (amp-mult (/ 1 (ly::peak sound)) (/ 1 (ly::peak sound2)))
+	       (amp (dry-wet 0.9 amp-mult (* line 0.3))
+		    (dry-wet (* line 0.7) amp-mult2 (* line2 0.3)))
+	       (mult (+ 1 (* (expt line 0.3) 2)))
+	       (rhythm (+ duration
+			  (min (* (rest-fun2 i) mult) 5))
+		       (+ duration2
+			  (min (* (rest-fun2 i) mult) 5)))
+	       (degree 0 90))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+	   ))
 
 ;; EOF score.lsp
