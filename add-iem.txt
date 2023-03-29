@@ -25,6 +25,6 @@
         AFByb2dyYW0gMQAQAAAA
       >
       FLOATPOS 0 0 0 0
-      FXID {21BA0349-8E33-48D7-94BA-D648B035A6FF}
+      FXID ~a
       WAK 0 0
     >

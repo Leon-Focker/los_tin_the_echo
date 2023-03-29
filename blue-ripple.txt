@@ -13,6 +13,6 @@
     >
     PRESETNAME Default
     FLOATPOS 0 0 0 0
-    FXID {8898DF47-1C03-44CF-878F-50DE85568C55}
+    FXID ~a
     WAK 0 0
   >

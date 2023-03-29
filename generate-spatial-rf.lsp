@@ -12,6 +12,8 @@
 ;; some global variables
 (defparameter *stereo-encoder-fxid*
   "{21BA0349-8E33-48D7-94BA-D648B035A6FF}")
+(defparameter *blue-ripple-O3A-decoder-fxid*
+  "{8898DF47-1C03-44CF-878F-50DE85568C55}")
 (defparameter *spatial-reaper-tempo* 60)
 
 ;; *** read-file
@@ -83,16 +85,18 @@
 	       :single-line-mode t)))
     (ppcre:regex-replace-all scan string
 			     (format nil "MAINSEND 1 0 ~&~a~&<ITEM"
-				     (read-file insert)))))
+				     (format nil (read-file insert)
+					     *stereo-encoder-fxid*)))))
 
 ;; **** insert-master-plugin
 (defun insert-master-plugin (string &optional
 				      (insert "/E/code/feedback/blue-ripple.txt"))
   (let* ((scan (ppcre:create-scanner "MASTER_SEL [0-9]+.{2,6}?<MASTERPLAYSPEEDENV"
-	       :single-line-mode t)))
+				     :single-line-mode t)))
     (ppcre:regex-replace-all scan string
 			     (format nil "MASTER_SEL 0~&~a~&<MASTERPLAYSPEEDENV"
-				     (read-file insert)))))
+				     (format nil (read-file insert)
+					     *blue-ripple-O3A-decoder-fxid*)))))
 
 ;; *** faders
 (defun set-all-faders (string &optional (set-to .5))
@@ -148,7 +152,7 @@
    (loop for x in envelope by #'cddr and y in (cdr envelope) by #'cddr
       with lastx = (first envelope) with lasty = (second envelope)
       for fy1 = (floor lasty) for fy2 = (floor y)
-      unless (or (= fy1 fy2) (and (= 0 (mod y 1)) (= 1 (abs (- fy1 fy2)))))
+      unless (= fy1 fy2)
       collect (env-mod-aux lastx lasty x y)
       collect x collect (mod1 y)
       do (setf lastx x lasty y))))
@@ -163,6 +167,7 @@
 	 (angle-len (loop for x in angle by #'cddr finally (return x)))
 	 (elevation-len (loop for x in elevation by #'cddr finally (return x)))
 	 angle-points elevation-points)
+    (print angle)
     (setf angle-points
 	  (loop for x in angle by #'cddr and y in (cdr angle) by #'cddr
 	     collect
@@ -192,13 +197,14 @@
 ;;; get list of automation-pairs and insert it into the first mixer track
 ;;; that doesn't have an envelope yet.
 (defun insert-envelopes (string spatial-sndfile)
-  (let* ((scan (ppcre:create-scanner "FXID \{.*?\}.{2,8}?WAK "
+  (let* ((scan (ppcre:create-scanner (format nil "FXID ~a.{2,8}?WAK "
+					     *stereo-encoder-fxid*)
 				     :single-line-mode t))
 	 (aut-env (write-automation-envelope spatial-sndfile)))
-    (ppcre:regex-replace-all scan string
-			     (format nil "FXID ~a~&~a      WAK "
-				     *stereo-encoder-fxid*
-				     aut-env))))
+    (ppcre:regex-replace scan string
+			 (format nil "FXID ~a~&~a      WAK "
+				 *stereo-encoder-fxid*
+				 aut-env))))
 
 ;; *** write-spatial-reaper-file
 
@@ -253,13 +259,15 @@
 
 (write-spatial-reaper-file
  `(,(make-spatial-sndfile "/E/code/feedback/glissando.wav"
-			  :angle-env '(0 0 1 .9)
-			  :elevation-env '(1 .5  .5 1  1 .5)))
+			  :angle-env '(0 1  1 1.5)
+			  :elevation-env '(0 1  1 2)))
  :ambi-order 3)
 
 ;; TODO
 ;; test if other reaper configurations work (plugin id etc), make fx-id a variable?
 ;; nice implementation of envelopes - env-mod
 ;; multichannel implementation? or stereo to mono (with auto balance)
-
+;; env-mod isn't working properly
+;; (env-mod '(0 1 1 1.5))
+;; => (0 1 1 1/2)
 ;; EOF generate-spatial-rf.lsp

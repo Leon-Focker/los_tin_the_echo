@@ -22,6 +22,7 @@
     (cond ((= 0 x) 0)
 	  ((= 0 (mod x 1)) 1)
 	  (t (mod x 1)))))
+(export 'mod1 :sc)
 
 ;; * morph-patterns
 ;;; morph between two patterns, using a morphing-function,

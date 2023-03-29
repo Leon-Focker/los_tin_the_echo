@@ -52,6 +52,7 @@
 (load "/E/code/feedback/patterns.lsp")
 (load "/E/code/feedback/utilities.lsp")
 (load "/E/code/feedback/transitions.lsp")
+(load "/E/code/feedback/generate-spatial-rf.lsp")
 (load "/E/code/feedback/score.lsp")
 
 ;; EOF dependencies.lsp
