@@ -11,7 +11,9 @@
 ;; morph and interpolate patterns
 (load (cl::os-path "/E/code/feedback/morph.lsp"))
 
-;; Michael Edwards samp1 instrument
+;; Michael Edwards samp1 instrument, but you can select the input channel:
+;; it would also be possible to use samp5 (slippery chicken), but long-term
+;; I would prefer a sampler that supports ambisonics output.
 (load (compile-file "/E/code/feedback/samp0.ins"))
 
 ;; use all in one package
