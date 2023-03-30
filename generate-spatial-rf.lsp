@@ -2,6 +2,12 @@
 ;; the purpose of this file is to automatically generate reaper files that
 ;; spatialize soundfiles using the IEM ambisonics plugins
 
+;; some IDs etc might change for every user
+;; -> test if other reaper configurations work (plugin id etc)
+;; multichannel implementation? or stereo to mono (with auto balance)
+;; some edge cases of env-mod might still be buggy (?)
+;; envelopes for angle and elevation are not 100% intuitive. change?
+
 ;; ** general
 
 (in-package :fb)
@@ -10,14 +16,16 @@
 (ql:quickload "cl-ppcre")
 
 ;; some global variables
+(set-sc-config 'reaper-files-for-windows t)
+(defparameter *spatial-reaper-tempo* 60)
+(defparameter *spatial-reaper-duration*  nil)
 (defparameter *stereo-encoder-fxid*
   "{21BA0349-8E33-48D7-94BA-D648B035A6FF}")
 (defparameter *blue-ripple-O3A-decoder-fxid*
   "{8898DF47-1C03-44CF-878F-50DE85568C55}")
-(defparameter *spatial-reaper-tempo* 60)
 
 ;; *** read-file
-;;; read an entire file a into string and return it
+;;; read an entire file (not just an s-expression) a into string and return it
 (defun read-file (infile)
   (with-open-file (instream infile :direction :input :if-does-not-exist nil)
     (when instream 
@@ -27,7 +35,6 @@
 
 ;; ** Project
 ;;; first create a reaper project that contains all samples:
-;;; make sure the tracks are routed correctly (mastertrack for decoder)
 
 ;; *** make-reaper-items4
 ;; every soundfile gets its own track, start-times are given individually
@@ -44,15 +51,19 @@
 
 ;; *** make-spatial-reaper-file
 ;;; make reaper-project holding the files to be spatialized
-(defun make-spatial-reaper-file (soundfiles &optional (start-times '(0)))
+(defun make-spatial-reaper-file (soundfiles &key (start-times '(0))
+					      (samplerate 48000))
   (let* ((items (make-reaper-items4 soundfiles start-times)))
-    (make-reaper-file 'spatial items :tempo *spatial-reaper-tempo*)))
+    (make-reaper-file 'spatial items
+		      :tempo *spatial-reaper-tempo*
+		      :samplerate samplerate)))
 
 ;; ** Insert changes
 
 ;; *** small adjustments
 
-(defun set-samplerate (string &optional (samplerate 48000))
+;; not needed, since it can be seet in write-rf
+#+nil(defun set-samplerate (string &optional (samplerate 48000))
   (let* ((scan1 (ppcre:create-scanner "SAMPLERATE [0-9]+"))
 	 (scan2 (ppcre:create-scanner "RENDER_FMT [0-9]+ [0-9]+ [0-9]+")))
     (setf string
@@ -106,8 +117,6 @@
 			     (format nil "AUTOMODE 0~&    VOLPAN ~a"
 				     set-to))))
 
-;;; something like plugin ID might change for every user...
-
 ;; ** spatial-snfile class
 ;;; like a sc::sndfile but with envelopes for elevation and angle
 
@@ -137,37 +146,44 @@
 ;; *** env-mod
 ;;; modulo for envelope curves, using linear interpolation to create
 ;;; intermedeate points
-(defun env-mod-aux (lastx lasty x y)
-  (let* ((ydiff (- (floor y) (floor lasty)))
-	 (xdiff (- x lastx)))
-    (loop for i from 0 below (abs ydiff)
-       for new-x = (+ lastx (abs (* (/ (+ i (- 1 (mod lasty 1))) ydiff) xdiff)))
-       collect new-x collect (if (> ydiff 0) 0 1)
-       collect (+ new-x .001) collect (if (> ydiff 0) 1 0))))
+(defun env-mod-aux (last-x last-y x y)
+  (let* ((yfloordiff (- (floor y) (floor last-y)))
+	 (pos? (> yfloordiff 0))
+	 (ydiff (- y last-y))
+	 (xdiff (- x last-x)))
+    (loop for i from 0 below (abs yfloordiff)
+       for mult = 2 then 1
+       for until-crossing = (+ i (if pos? (- 1 (mod last-y 1)) (mod last-y 1)))
+       for test = (= 0 until-crossing)
+       for new-x = (+ last-x (abs (* (/ until-crossing ydiff) xdiff)))
+       unless test collect new-x unless test collect (if pos? .9999999 0)
+       collect (+ new-x (* .00001 mult)) collect (if pos? 0 .9999999))))
        
 (defun env-mod (envelope)
   (unless (listp envelope)
     (error "envelope in env-mod should be a list but is ~a" envelope))
   (flatten
    (loop for x in envelope by #'cddr and y in (cdr envelope) by #'cddr
-      with lastx = (first envelope) with lasty = (second envelope)
-      for fy1 = (floor lasty) for fy2 = (floor y)
-      unless (= fy1 fy2)
-      collect (env-mod-aux lastx lasty x y)
-      collect x collect (mod1 y)
-      do (setf lastx x lasty y))))
+      with last-x = (first envelope) with last-y = (second envelope)
+      for fy1 = (floor last-y) for fy2 = (floor y)
+      when (and (= 0 (mod y 1)) (not (= 0 y))) do (setf y (- y .0000001))
+      when (< x last-x)
+      do (warn "env-mod encountered am envelope with decreasing x-value")
+      unless (= fy1 fy2) collect (env-mod-aux last-x last-y x y)
+      collect x collect (mod y 1)
+      do (setf last-x x last-y y))))
 
 ;; *** generate-automation-data
 ;;; parse the envelope information from a spatial-sndfile into reaper automation
 ;;; data
 (defmethod generate-automation-data ((ssf spatial-sndfile))
-  (let* ((len (rational (* (snd-duration ssf) (/ *spatial-reaper-tempo* 60))))
+  (let* ((dur (or *spatial-reaper-duration* (snd-duration ssf)))
+	 (len (rational (* dur (/ *spatial-reaper-tempo* 60))))
 	 (angle (env-mod (angle-env ssf)))
 	 (elevation (env-mod (elevation-env ssf)))
 	 (angle-len (loop for x in angle by #'cddr finally (return x)))
 	 (elevation-len (loop for x in elevation by #'cddr finally (return x)))
 	 angle-points elevation-points)
-    (print angle)
     (setf angle-points
 	  (loop for x in angle by #'cddr and y in (cdr angle) by #'cddr
 	     collect
@@ -208,10 +224,25 @@
 
 ;; *** write-spatial-reaper-file
 
-;;; spatial-sndfiles - list of spatial-sndfile objects
+;;; spatial-sndfiles - list of spatial-sndfile objects.
+;;; start-times - list of start-times for each file on each track. If the list
+;;;  is shorter than the number of soundfiles, it's rolled over. 
+;;; file - the path to the file that's generated.
+;;; duration - duration of each envelope. If nil, duration of each
+;;;  spatial-sndfile is used.
+;;; use-longest-duration? - If true, look for the longest duration
+;;;  (+ start-time) in all spatial-sndfiles and generate all envelopes with this
+;;;  length. Duration is overwritten by this.
+;;; ambi-order - should be an integer between 1 and 8, this determines the
+;;;  number of channel for each track.
+;;; samplerate - samplerate of the file.
+;;; tempo - tempo of the file
+;;; init-vol - Volume multiplier the faders will start at. Init is -12db (~.25)
 (defun write-spatial-reaper-file (spatial-sndfiles &key (start-times '(0))
-					       (ambi-order 3)
 						     file
+						     duration
+						     use-longest-duration?
+						     (ambi-order 3)
 						     (samplerate 48000)
 						     (tempo 60)
 						     (init-vol .2511))
@@ -223,7 +254,12 @@
 	   ambi-order))
   (unless (and start-times (listp start-times))
     (setf start-times '(0)))
-  (setf *spatial-reaper-tempo* tempo)
+  (when use-longest-duration?
+    (setf duration (loop for snd in spatial-sndfiles and i from 0
+		      maximize (+ (nth (mod i (length start-times)) start-times)
+				  (snd-duration snd)))))
+  (setf *spatial-reaper-tempo* tempo
+	*spatial-reaper-duration* duration)
   (let* ((filename (or file "/E/code/feedback/reapertest/spatial-test.rpp"))
 	 (channel-nr (expt (1+ ambi-order) 2))
 	 (soundfiles (loop for snd in spatial-sndfiles
@@ -237,11 +273,13 @@
 	 string)
     ;; write an "ordinary" reaper file first
     (write-reaper-file
-     (make-spatial-reaper-file soundfiles start-times)
+     (make-spatial-reaper-file soundfiles
+			       :start-times start-times
+			       :samplerate samplerate)
      :file filename)
     (setf string (read-file filename)
     ;; now modify it
-	  string (set-samplerate string samplerate)
+	 ; string (set-samplerate string samplerate)
 	  string (set-master-channels string channel-nr)
 	  string (set-track-channels string channel-nr)
 	  string (insert-master-plugin string)
@@ -258,16 +296,17 @@
 ;; ** EXAMPLE
 
 (write-spatial-reaper-file
- `(,(make-spatial-sndfile "/E/code/feedback/glissando.wav"
-			  :angle-env '(0 1  1 1.5)
-			  :elevation-env '(0 1  1 2)))
- :ambi-order 3)
+ `(,(make-spatial-sndfile "/E/code/feedback/intro.wav"
+			  :angle-env '(0 0  .5 .5  .8 4  1 3.5)
+			  :elevation-env '(0 0  .6 .5  2 .5))
+    ,(make-spatial-sndfile "/E/code/feedback/continuo.wav"
+			  :angle-env '(0 0  .5 .5  .8 8  1 3.25)
+			  :elevation-env '(0 0.5  1 .5))
+    ,(make-spatial-sndfile "/E/code/feedback/continuo2.wav"
+			  :angle-env '(0 .5  .5 1  .8 8.5  1 3.75)
+			  :elevation-env '(0 0.5  1 .5)))
+ :start-times '(0 10 0)
+ :ambi-order 3
+ :use-longest-duration? t)
 
-;; TODO
-;; test if other reaper configurations work (plugin id etc), make fx-id a variable?
-;; nice implementation of envelopes - env-mod
-;; multichannel implementation? or stereo to mono (with auto balance)
-;; env-mod isn't working properly
-;; (env-mod '(0 1 1 1.5))
-;; => (0 1 1 1/2)
 ;; EOF generate-spatial-rf.lsp
