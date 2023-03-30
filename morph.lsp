@@ -1,9 +1,13 @@
-(in-package :sc)
-;; for use in instrumental piece, consider .../instrumental/helpers.lsp
+;; * morph.lsp
+;;; home of morph-patterns and interpolate-patterns - two ways of transitioning
+;;; from one pattern (any kind of list with numbers) to another
 
-;; * patterns-to-rhythms-list
+(in-package :sc)
+
+;; ** patterns-to-rhythms-list
 ;;; list of style '((1 1 (1) 1 1 (1)) ((1) 1 1 (1) 1))
 ;;; to '((1 1 1 1 1 1) (1 1 1 1 1))
+;;; could this be easier with sc::flatten?
 (defun patterns-to-rhythms-list (patterns)
   (loop for pattern in patterns
 	collect
@@ -16,7 +20,8 @@
 		    rhythm
 		    (error "pattern holds weird value: ~a" rhythm))))))
 
-;; * mod1
+;; ** mod1
+;;; (mod x 1), but return 1 if (and (= 0 (mod x 1)) (not (= 0 x)))
 (defun mod1 (x)
   (let ((x (rational x)))
     (cond ((= 0 x) 0)
@@ -24,10 +29,16 @@
 	  (t (mod x 1)))))
 (export 'mod1 :sc)
 
-;; * morph-patterns
+;; ** morph-patterns
 ;;; morph between two patterns, using a morphing-function,
-;;; eg. fibonacci-transition
-;;; patterns - list of sublists containing durations - a list of patterns
+;;; eg. fibonacci-transition. This morphing-function will determine which
+;;; pattern to choose the next element from. The numerical values in patterns
+;;; are not changed, but the patterns are mixed.
+;;; patterns - a list of patterns - list of sublists containing durations.
+;;;  Can also contain durations in parentheses (rests). Here is a simple example
+;;;  for patterns:
+;;;  '((.25 (.25) .25 (.25)) ((.25) .25 (.25) .25))
+;;;  -> two patterns, each have a total duration of 1.
 ;;; duration - the sum of all durations in the result
 ;;;  -> the duration of the resulting sequence
 ;;; cut-end? - t or nil, tries to avoid a repetition of an entire unaltered
@@ -47,6 +58,7 @@
 					   length
 					   (morphing-function
 					    (fibonacci-transition 20)))
+  ;; sanity checks
   (unless (typep patterns 'list)
     (error "morph-patterns needs patterns to be a list: ~a" patterns))
   (unless (or (not length) (numberp length))
@@ -69,7 +81,9 @@
   (unless (numberp (funcall morphing-function 0))
     (error "morphing function not usefull: ~a" morphing-function))
   (when length (setf overlap-duration t))
-  ;;(visualize (print (loop for i below length collect (funcall morphing-function i))))
+  #|(visualize 
+  (loop for i below length collect (funcall morphing-function i)))|#
+  ;; the important part:
   (let* ((rhythms-list (patterns-to-rhythms-list patterns)))
     (loop for i from 0
        for sum = 0 then (rational (+ sum (if (= 0 rhythm) 1 rhythm)))
@@ -107,9 +121,10 @@
        ;; return the final rhythm sequence:
 	 (return ls))))
 
-;; * interpolate-patterns
-;;; slowly adjust the durations of a pattern until it matches the next one
-;;; patterns - list of sublists containing durations - a list of patterns
+;; ** interpolate-patterns
+;;; interpolate the numerical values in one pattern until it matches the next
+;;; pattern. The patterns do not have to have the same length.
+;;; patterns - list of sublists containing durations - see morph-patterns
 ;;; duration - the sum of all durations in the result
 ;;;  -> the duration of the resulting sequence
 ;;; transition-ratios - the duration of the interpolation between one pattern
@@ -119,6 +134,7 @@
 ;;;  set to any list containing any two numbers.
 (defun interpolate-patterns (patterns duration
 			     &optional overlap-duration transition-ratios)
+  ;; sanity checks
   (if transition-ratios
       (unless (= (1- (length patterns)) (length transition-ratios))
 	(error "different number of pattern-transitions and transition-ratios ~
@@ -134,6 +150,7 @@
 			collect (* (/ i ratio-sum) duration)))
 	 (trans-starts (append '(0) (loop for i in trans-durs
 				       sum i into sum collect sum))))
+    ;; the fun part:
     (loop for i from 0
        for sum = 0 then (rational (+ sum rhythm))
        for n = (decider (/ sum duration) trans-durs)

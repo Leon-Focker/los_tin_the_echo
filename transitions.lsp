@@ -1,10 +1,16 @@
-;; * Collection of transition-functions
+;; * transitions.lsp
+;;; Collection of transition-functions, basically a way of generating lists.
+;;; These are intended to use as "control data", for example as a
+;;; morphing-function in morph-patterns. But of course they can be used in any
+;;; way possible.
 
 (in-package :fb)
 
 ;; ** fibonacci-transitions
+;;; see sc::fibonacci-transitions
 
 ;; ** procession
+;;; see sc::procession
 
 ;; ** kernel-transition
 

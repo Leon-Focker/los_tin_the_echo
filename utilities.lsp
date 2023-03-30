@@ -1,4 +1,7 @@
 ;; * Utilities for feedback
+;;; a lot of utility functions and weird macros that might not follow any
+;;; conventions (I have no clue), but damn I am proud of fplay!
+
 (in-package :fb)
 
 ;; ** get-start-times

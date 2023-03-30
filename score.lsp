@@ -1,4 +1,6 @@
 ;; * SCORE
+;;; Generation of the piece happens here, check out the documentation for each
+;;; function to find out how things work :]
 
 (in-package :fb)
 

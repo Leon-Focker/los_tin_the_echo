@@ -1,5 +1,11 @@
 ;; * FEEDBACK
+;;; This is the infrastructure (and when finished the score) to an
+;;; algorithmically composed piece of music. I use Lisp and the Common Lisp
+;;; Music, Slippery Chicken and Layers Package. Additionally to this a sample
+;;; library is needed and the paths to the samples must be changed in
+;;; soundfiles.lsp
 
+This is free to use (credit would be much appreciated) and without any warranty.
 (in-package :sc)
 
 ;; ** dependencies
@@ -45,11 +51,11 @@
 
 ;; ** globals
 
+;; set this to true, if you want to re-analyse all soundfiles, even if their
+;; analysis data was saved to a text-file.
 (defparameter *re-analyse-soundfiles* nil)
 ;; for the generation of spatial audio files with reaper:
 (set-sc-config 'reaper-files-for-windows t)
-(defparameter *spatial-reaper-tempo* 60)
-(defparameter *spatial-reaper-duration*  nil)
 
 ;; ** load
 

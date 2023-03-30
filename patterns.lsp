@@ -1,3 +1,8 @@
+;; * patterns.lsp
+;;; the patterns in here are not really used... but let's keep them for now!
+;;; also some envelopes are defined here. I guess all of this could be merged
+;;; with the ** material part of score.lsp
+
 (in-package :feedback)
 
 (defparameter *pattern1* '(0.5 0.75 0.5 0.75 0.5 0.75 0.75))
@@ -32,8 +37,5 @@
      collect i collect
        (+ (* (- 1 base) (if flip? (- 1 val) val))
 	  base)))
-
-(defparameter *amp-env02*
-  '(0 0  100 0))
 
 ;; EOF pattterns.lsp

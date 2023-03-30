@@ -1,12 +1,14 @@
 ;; * SPATIAL
-;; the purpose of this file is to automatically generate reaper files that
-;; spatialize soundfiles using the IEM ambisonics plugins
+;;; the purpose of this file is to automatically generate reaper files that
+;;; spatialize soundfiles using the IEM ambisonics plugins
+;;; check out #'write-spatial-reaper-file below, if you want to use it.
 
-;; some IDs etc might change for every user
-;; -> test if other reaper configurations work (plugin id etc)
-;; multichannel implementation? or stereo to mono (with auto balance)
-;; some edge cases of env-mod might still be buggy (?)
-;; envelopes for angle and elevation are not 100% intuitive. change?
+;;; TODO
+;;; further testing required, wheter this works for other people on other
+;;; systems
+;;; multichannel implementation? or stereo to mono (with auto balance)
+;;; some edge cases of env-mod might still be buggy (?)
+;;; envelopes for angle and elevation are not 100% intuitive. change?
 
 ;; ** general
 
@@ -15,7 +17,9 @@
 ;; load a regex library
 (ql:quickload "cl-ppcre")
 
-;; some global variables
+;; some global variables (don't touch :P)
+(defparameter *spatial-reaper-tempo* 60)
+(defparameter *spatial-reaper-duration*  nil)
 (defparameter *stereo-encoder-fxid*
   "{21BA0349-8E33-48D7-94BA-D648B035A6FF}")
 (defparameter *blue-ripple-O3A-decoder-fxid*
@@ -220,7 +224,6 @@
 				 aut-env))))
 
 ;; *** write-spatial-reaper-file
-
 ;;; spatial-sndfiles - list of spatial-sndfile objects.
 ;;; start-times - list of start-times for each file on each track. If the list
 ;;;  is shorter than the number of soundfiles, it's rolled over. 
