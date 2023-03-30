@@ -16,9 +16,6 @@
 (ql:quickload "cl-ppcre")
 
 ;; some global variables
-(set-sc-config 'reaper-files-for-windows t)
-(defparameter *spatial-reaper-tempo* 60)
-(defparameter *spatial-reaper-duration*  nil)
 (defparameter *stereo-encoder-fxid*
   "{21BA0349-8E33-48D7-94BA-D648B035A6FF}")
 (defparameter *blue-ripple-O3A-decoder-fxid*
@@ -260,7 +257,7 @@
 				  (snd-duration snd)))))
   (setf *spatial-reaper-tempo* tempo
 	*spatial-reaper-duration* duration)
-  (let* ((filename (or file "/E/code/feedback/reapertest/spatial-test.rpp"))
+  (let* ((filename (or file "/E/code/feedback/spatial-test.rpp"))
 	 (channel-nr (expt (1+ ambi-order) 2))
 	 (soundfiles (loop for snd in spatial-sndfiles
 			unless (equal 'spatial-sndfile (type-of snd))
@@ -295,6 +292,7 @@
 
 ;; ** EXAMPLE
 
+#|
 (write-spatial-reaper-file
  `(,(make-spatial-sndfile "/E/code/feedback/intro.wav"
 			  :angle-env '(0 0  .5 .5  .8 4  1 3.5)
@@ -308,5 +306,6 @@
  :start-times '(0 10 0)
  :ambi-order 3
  :use-longest-duration? t)
+|#
 
 ;; EOF generate-spatial-rf.lsp

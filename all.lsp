@@ -4,17 +4,8 @@
 
 ;; ** dependencies
 
-;; structures:
+;; Layers Package:
 (load (cl::os-path "/E/code/layers/src/all.lsp"))
-;(import 'layers::make-structure)
-
-;; morph and interpolate patterns
-(load (cl::os-path "/E/code/feedback/morph.lsp"))
-
-;; Michael Edwards samp1 instrument, but you can select the input channel:
-;; it would also be possible to use samp5 (slippery chicken), but long-term
-;; I would prefer a sampler that supports ambisonics output.
-(load (compile-file "/E/code/feedback/samp0.ins"))
 
 ;; use all in one package
 (defpackage :feedback
@@ -22,6 +13,16 @@
   (:nicknames :fb))
 
 (in-package :feedback)
+
+(defparameter *src-dir*
+  (ly::os-path (ly::directory-name (namestring *load-pathname*))))
+
+;; morph and interpolate patterns
+(load (probe-file (format nil "~a~a" *src-dir* "morph.lsp")))
+
+;; Michael Edwards samp1 instrument, but you can select the input channel:
+;; It would also be possible to use samp5 (slippery chicken).
+(load (compile-file (probe-file (format nil "~a~a" *src-dir* "samp0.ins"))))
 
 (import '(ly::make-structure
 	  ly::make-stored-file
@@ -40,10 +41,15 @@
 	  clm::*CLM-MIX-CALLS*
 	  clm::*CLM-MIX-OPTIONS*
 	  clm::add-sound
-	  ;;clm::samp1
 	  clm::samp0))
 
+;; ** globals
+
 (defparameter *re-analyse-soundfiles* nil)
+;; for the generation of spatial audio files with reaper:
+(set-sc-config 'reaper-files-for-windows t)
+(defparameter *spatial-reaper-tempo* 60)
+(defparameter *spatial-reaper-duration*  nil)
 
 ;; ** load
 
@@ -54,5 +60,17 @@
 (load "/E/code/feedback/transitions.lsp")
 (load "/E/code/feedback/generate-spatial-rf.lsp")
 (load "/E/code/feedback/score.lsp")
+
+(dolist (file '("soundfiles.lsp"
+		"utilities.lsp"
+		"patterns.lsp"
+		"transitions.lsp"
+		"generate-spatial-rf.lsp"
+		"score.lsp"
+		))
+  (load (probe-file (format nil "~a~a" *src-dir* file))))
+
+;; YAY :)
+(format t "~&done loading!")
 
 ;; EOF dependencies.lsp

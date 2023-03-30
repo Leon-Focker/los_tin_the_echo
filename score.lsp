@@ -2,7 +2,7 @@
 
 (in-package :fb)
 
-;; TODO: floats and rationals
+;; TODO: *distorted* contains raw samples (bc folder inside foldwer) :/
 
 ;; ** form
 ;; 1 intro (pure)
@@ -283,10 +283,10 @@
 	    (time2 (* 0.8059 (startn 2)))
 	    (srt 0.023181288)
 	    (srt2 0.0487395))
-	(samp1 file time :amp 1.3 :amp-env *amp-env01* :srt srt :degree 45
+	(samp0 file time :amp 1.3 :amp-env *amp-env01* :srt srt :degree 45
 	       :duration (min (/ (ly::soundfile-duration file) srt)
 			      (- startn2 time)))
-	(samp1 file2 time2 :amp-env *amp-env01* :srt srt2 :degree 45
+	(samp0 file2 time2 :amp-env *amp-env01* :srt srt2 :degree 45
 	       :duration (min (/ (ly::soundfile-duration file2) srt2)
 			      (- startn2 time2)))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -411,6 +411,27 @@
 			  (min (* (rest-fun2 i) mult) 5)))
 	       (degree 0 90))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-	   ))
+    ))
+
+;; ** spatialize
+
+;;; proof of concept for now
+;;; split all tracks into mono tracks should make this usefull
+
+;#|
+(write-spatial-reaper-file
+ `(,(make-spatial-sndfile "/E/code/feedback/intro.wav"
+			  :angle-env '(0 0  .5 .5  .8 4  1 3.5)
+			  :elevation-env '(0 0  .6 .5  2 .5))
+    ,(make-spatial-sndfile "/E/code/feedback/continuo.wav"
+			  :angle-env '(0 0  .5 .5  .8 8  1 3.25)
+			  :elevation-env '(0 0.5  1 .5))
+    ,(make-spatial-sndfile "/E/code/feedback/continuo2.wav"
+			  :angle-env '(0 .5  .5 1  .8 8.5  1 3.75)
+			  :elevation-env '(0 0.5  1 .5)))
+ :start-times '(0 10 0)
+ :ambi-order 3
+ :use-longest-duration? t)
+;|#
 
 ;; EOF score.lsp
