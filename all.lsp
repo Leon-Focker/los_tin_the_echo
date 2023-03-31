@@ -5,7 +5,8 @@
 ;;; library is needed and the paths to the samples must be changed in
 ;;; soundfiles.lsp
 
-This is free to use (credit would be much appreciated) and without any warranty.
+;; This is free to use (credit would be much appreciated) and without any warranty.
+
 (in-package :sc)
 
 ;; ** dependencies
@@ -21,7 +22,7 @@ This is free to use (credit would be much appreciated) and without any warranty.
 (in-package :feedback)
 
 (defparameter *src-dir*
-  (ly::os-path (ly::directory-name (namestring *load-pathname*))))
+  (directory-namestring (truename *load-pathname*)))
 
 ;; morph and interpolate patterns
 (load (probe-file (format nil "~a~a" *src-dir* "morph.lsp")))
