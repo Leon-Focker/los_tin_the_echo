@@ -4,6 +4,8 @@
 
 (in-package :fb)
 
+(format t "~&processing SCORE")
+
 ;; TODO: *distorted* contains raw samples (bc folder inside foldwer) :/
 
 ;; ** form
@@ -420,20 +422,21 @@
 ;;; proof of concept for now
 ;;; split all tracks into mono tracks should make this usefull
 
-;#|
+;;#|
+(in-package :sc)
+
 (write-spatial-reaper-file
  `(,(make-spatial-sndfile "/E/code/feedback/intro.wav"
 			  :angle-env '(0 0  .5 .5  .8 4  1 3.5)
 			  :elevation-env '(0 0  .6 .5  2 .5))
     ,(make-spatial-sndfile "/E/code/feedback/continuo.wav"
 			  :angle-env '(0 0  .5 .5  .8 8  1 3.25)
-			  :elevation-env '(0 0.5  1 .5))
+			  :elevation-env '(0 0.5  1 .5)
+			  :start-time 10)
     ,(make-spatial-sndfile "/E/code/feedback/continuo2.wav"
 			  :angle-env '(0 .5  .5 1  .8 8.5  1 3.75)
 			  :elevation-env '(0 0.5  1 .5)))
- :start-times '(0 10 0)
- :ambi-order 3
- :use-longest-duration? t)
-;|#
+ :ambi-order 3)
+;;|#
 
 ;; EOF score.lsp

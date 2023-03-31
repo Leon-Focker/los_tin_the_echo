@@ -12,14 +12,22 @@
 
 ;; ** general
 
-(in-package :fb)
+(in-package :sc)
+
+;; to load from same dir:
+(defparameter *src-dir*
+  (directory-namestring (truename *load-pathname*)))
 
 ;; load a regex library
 (ql:quickload "cl-ppcre")
 
 ;; some global variables (don't touch :P)
 (defparameter *spatial-reaper-tempo* 60)
+;; if nil - use individual-duration
+;; if > 0 - set every env to this duration :duration t
+;; if < 0 - end at (abs) of this time :end-times nil
 (defparameter *spatial-reaper-duration*  nil)
+(defparameter *spatial-reaper-use-starts* nil)
 (defparameter *stereo-encoder-fxid*
   "{21BA0349-8E33-48D7-94BA-D648B035A6FF}")
 (defparameter *blue-ripple-O3A-decoder-fxid*
@@ -92,7 +100,9 @@
 ;;; encoder and decoder...
 
 ;; **** insert-plugins
-(defun insert-plugins (string &optional (insert "/E/code/feedback/add-iem.txt"))
+(defun insert-plugins
+    (string &optional
+	      (insert (format nil "~a~a" *src-dir* "add-iem.txt")))
   (let* ((scan (ppcre:create-scanner "MAINSEND.{6,10}?<ITEM"
 	       :single-line-mode t)))
     (ppcre:regex-replace-all scan string
@@ -101,8 +111,9 @@
 					     *stereo-encoder-fxid*)))))
 
 ;; **** insert-master-plugin
-(defun insert-master-plugin (string &optional
-				      (insert "/E/code/feedback/blue-ripple.txt"))
+(defun insert-master-plugin
+    (string &optional
+	      (insert (format nil "~a~a" *src-dir* "blue-ripple.txt")))
   (let* ((scan (ppcre:create-scanner "MASTER_SEL [0-9]+.{2,6}?<MASTERPLAYSPEEDENV"
 				     :single-line-mode t)))
     (ppcre:regex-replace-all scan string
@@ -129,7 +140,9 @@
    ;; the string that will be printed in the reaper file
    (astring :accessor astring :type string
             ;; read in the text for an item
-            :initform (read-file "/E/code/feedback/astring.txt"))))
+            :initform (read-file (format nil "~a~a" *src-dir* "astring.txt")))
+   (start-time :accessor start-time :type number :initarg :start-time
+	       :initform 0)))
 
 ;; *** make-spatial-sndfile
 ;;; not meant to be called from within a sndfile-palette object, so simple init
@@ -137,12 +150,13 @@
 				    (elevation-env '(0 .5  100 .5))
 				    id data duration end (start 0.0)
 				    (frequency nil)
-				    (amplitude 1.0))
+				    (amplitude 1.0)
+				    (start-time 0))
   (make-instance 'spatial-sndfile
 		 :id id :data data :path path :duration duration
 		 :angle-env angle-env :elevation-env elevation-env
 		 :frequency frequency :end end :start start
-		 :amplitude amplitude))
+		 :amplitude amplitude :start-time start-time))
 
 ;; *** env-mod
 ;;; modulo for envelope curves, using linear interpolation to create
@@ -178,7 +192,14 @@
 ;;; parse the envelope information from a spatial-sndfile into reaper automation
 ;;; data
 (defmethod generate-automation-data ((ssf spatial-sndfile))
-  (let* ((dur (or *spatial-reaper-duration* (snd-duration ssf)))
+  (let* ((start (if *spatial-reaper-use-starts* (start-time ssf) 0))
+	 (dur0 *spatial-reaper-duration*)
+	 (dur (if dur0
+		  (if (< dur0 0) (- (abs dur0) start) dur0)
+		  (if *spatial-reaper-use-starts*
+		      (snd-duration ssf)
+		      (+ (snd-duration ssf) (start-time ssf)))))
+	 ;(or *spatial-reaper-duration* (snd-duration ssf)))
 	 (len (rational (* dur (/ *spatial-reaper-tempo* 60))))
 	 (angle (env-mod (angle-env ssf)))
 	 (elevation (env-mod (elevation-env ssf)))
@@ -189,13 +210,13 @@
 	  (loop for x in angle by #'cddr and y in (cdr angle) by #'cddr
 	     collect
 	       (format nil "PT ~a ~a 0 0"
-		       (float (* (/ x angle-len) len))
+		       (float (+ (* (/ x angle-len) len) start))
 		       (mod y 1.0))))
     (setf elevation-points
 	  (loop for x in elevation by #'cddr and y in (cdr elevation) by #'cddr
 	     collect
 	       (format nil "PT ~a ~a 0 0"
-		       (float (* (/ x elevation-len) len))
+		       (float (+ (* (/ x elevation-len) len) start))
 		       (mod y 1.0))))
     (values angle-points elevation-points)))
 
@@ -228,20 +249,22 @@
 ;;; start-times - list of start-times for each file on each track. If the list
 ;;;  is shorter than the number of soundfiles, it's rolled over. 
 ;;; file - the path to the file that's generated.
-;;; duration - duration of each envelope. If nil, duration of each
-;;;  spatial-sndfile is used.
-;;; use-longest-duration? - If true, look for the longest duration
-;;;  (+ start-time) in all spatial-sndfiles and generate all envelopes with this
-;;;  length. Duration is overwritten by this.
+;;; use-start-times - if nil, all envelopes start at 0. If t, the envelopes use
+;;;  the start-time of the respective spatial-sndfile.
+;;; use-end-times - if nil, all envelopes end when every sndfile has stopped.
+;;;  If t, end when the respective sndfile stopps.
+;;; duration - duration of each envelope. If nil, see behavior of use-end-times.
+;;;  If t, use-end-times is overwritten by this and every envelope gets the same
+;;;  duration.
 ;;; ambi-order - should be an integer between 1 and 8, this determines the
 ;;;  number of channel for each track.
 ;;; samplerate - samplerate of the file.
 ;;; tempo - tempo of the file
 ;;; init-vol - Volume multiplier the faders will start at. Init is -12db (~.25)
-(defun write-spatial-reaper-file (spatial-sndfiles &key (start-times '(0))
-						     file
+(defun write-spatial-reaper-file (spatial-sndfiles &key file
+						     use-start-times
+						     use-end-times
 						     duration
-						     use-longest-duration?
 						     (ambi-order 3)
 						     (samplerate 48000)
 						     (tempo 60)
@@ -252,25 +275,32 @@
   (unless (and (integerp ambi-order) (< 0 ambi-order 9))
     (error "ambi-order should be an integer between 1 and 8 but is ~a"
 	   ambi-order))
-  (unless (and start-times (listp start-times))
-    (setf start-times '(0)))
-  (when use-longest-duration?
-    (setf duration (loop for snd in spatial-sndfiles and i from 0
-		      maximize (+ (nth (mod i (length start-times)) start-times)
-				  (snd-duration snd)))))
+  ;; when no duration is given and we don't use end-times, look for the file
+  ;; that is playing the longest
+  (unless (or duration use-end-times)
+    (setf duration (- (loop for snd in spatial-sndfiles and i from 0
+			 maximize (+ (start-time snd) (snd-duration snd))))))
+  ;; use globals to give information to #'generate-automation-data
   (setf *spatial-reaper-tempo* tempo
-	*spatial-reaper-duration* duration)
-  (let* ((filename (or file "/E/code/feedback/spatial-test.rpp"))
+	*spatial-reaper-duration* duration
+	*spatial-reaper-use-starts* use-start-times)
+  (let* ((filename (or file (format nil "~a~a" *src-dir* "spatial-test.rpp")))
 	 (channel-nr (expt (1+ ambi-order) 2))
-	 (soundfiles (loop for snd in spatial-sndfiles
-			unless (equal 'spatial-sndfile (type-of snd))
-			do (error "~a is not of type spatial-sndfile" snd)
-			when (> (channels snd) 2)
-			do (warn "soundfiles with ~a channels detected, but ~
-                                  stereo-encoders are used"
-				 (channels snd))
-			collect (path snd)))
+	 (soundfiles '())
+	 (start-times '())
 	 string)
+    (multiple-value-bind (sndfls stimes)
+	(loop for snd in spatial-sndfiles
+	   unless (equal 'spatial-sndfile (type-of snd))
+	   do (error "~a is not of type spatial-sndfile" snd)
+	   when (> (channels snd) 2)
+	   do (warn "soundfiles with ~a channels detected, but ~
+                                  stereo-encoders are used"
+		    (channels snd))
+	   collect (path snd) into sndfls
+	   collect (start-time snd) into stimes
+	   finally (return (values sndfls stimes)))
+      (setf soundfiles sndfls start-times stimes))
     ;; write an "ordinary" reaper file first
     (write-reaper-file
      (make-spatial-reaper-file soundfiles
@@ -295,20 +325,20 @@
 
 ;; ** EXAMPLE
 
-#|
 (write-spatial-reaper-file
- `(,(make-spatial-sndfile "/E/code/feedback/intro.wav"
+ `(,(make-spatial-sndfile (format nil "~a~a" *src-dir* "intro.wav")
 			  :angle-env '(0 0  .5 .5  .8 4  1 3.5)
 			  :elevation-env '(0 0  .6 .5  2 .5))
-    ,(make-spatial-sndfile "/E/code/feedback/continuo.wav"
+    ,(make-spatial-sndfile (format nil "~a~a" *src-dir* "continuo.wav")
 			  :angle-env '(0 0  .5 .5  .8 8  1 3.25)
-			  :elevation-env '(0 0.5  1 .5))
-    ,(make-spatial-sndfile "/E/code/feedback/continuo2.wav"
+			  :elevation-env '(0 0.5  1 .5)
+			  :start-time 10)
+    ,(make-spatial-sndfile (format nil "~a~a" *src-dir* "continuo2.wav")
 			  :angle-env '(0 .5  .5 1  .8 8.5  1 3.75)
 			  :elevation-env '(0 0.5  1 .5)))
- :start-times '(0 10 0)
  :ambi-order 3
- :use-longest-duration? t)
-|#
+ :use-start-times t
+ :use-end-times t
+ :duration 10)
 
 ;; EOF generate-spatial-rf.lsp
