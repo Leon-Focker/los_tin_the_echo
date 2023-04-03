@@ -46,16 +46,26 @@
 ;;;  Also this currently only works when a list is given for the transition
 ;;; overlap-duration - t will append the last rhythm without squeezing it
 ;;;  perfectly into the given duration (no subtraction of last rhythm)
+;;; length - when nil, generate a list with duration, when a number, generate
+;;;  a list with this length.
+;;; collect-indices - if nil, everything happens as normal. If t, don't collect
+;;;  the rhythm value but a listwith two values - the first being the index of
+;;;  the pattern in patterns and the second being the index of the rhythm value
+;;;  in the pattern. This way, you could morph a second set of patterns
+;;;  according to the original set of patterns. For example the first set of
+;;;  patterns could be some rhythms and the second set could be note names.
+;;;  These could normally not be processed by morph-patterns but can then be
+;;;  morphed using the indices the call to morph-patterns with the rhythms
+;;;  produced.
 ;;; morphing-function - determines how the transition between the patterns
 ;;;  is happening. Can be a list (eg. one made from fibonacci-transitions).
 ;;;  Can also be a function, which must accept one rational number as an
 ;;;  argument and returns one rational number.
-;;; length - when nil, generate a list with duration, when a number, generate
-;;;  a list with this length.
 (defun morph-patterns (patterns duration &optional
 					   cut-end?
 					   overlap-duration
 					   length
+					   collect-indices
 					   (morphing-function
 					    (fibonacci-transition 20)))
   ;; sanity checks
@@ -80,14 +90,15 @@
 	       morphing-function)))
   (unless (numberp (funcall morphing-function 0))
     (error "morphing function not usefull: ~a" morphing-function))
-  (when length (setf overlap-duration t))
+  (when (or length collect-indices) (setf overlap-duration t))
   #|(visualize 
   (loop for i below length collect (funcall morphing-function i)))|#
   ;; the important part:
   (let* ((rhythms-list (patterns-to-rhythms-list patterns)))
     (loop for i from 0
        for sum = 0 then (rational (+ sum (if (= 0 rhythm) 1 rhythm)))
-       for key = (round (ly::mirrors (funcall morphing-function sum)
+       for key = (round (ly::mirrors (funcall morphing-function
+					      (if length i sum))
 				     0 (1- (length patterns))))
        for pattern = (nth key patterns)
        for rhythms = (nth key rhythms-list)
@@ -105,8 +116,12 @@
        ;; rhythm is the duration of the event
        for rhythm = (nth index rhythms)
        ;; event can be a rest or a note with a duration
-       for event = (nth index pattern)
+       ;; Alternatively it's a list of the indices at which to find the event.
+       for event = (if collect-indices `(,key ,index) (nth index pattern))
        until (if length (>= i (1- length)) (>= (+ sum rhythm) duration))
+       ;; if collect-indices is t, collect lists, in which the first element is
+       ;; the index of the pattern and the second element is the index within
+       ;; that pattern. Else collect event (element in pattern at that position)
        collect event into ls
        ;; when the next rhythm would complete the sequence:
        finally

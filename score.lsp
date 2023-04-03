@@ -62,9 +62,9 @@
 (let* ((len 30)
        (rthm1 (get-start-times (wt len '(0.8 2 3.6 6.9 2.5))))
        (rthm2 (get-start-times (wt len '(0.8 2 3.6 6.9 2.5) 0.3)))
-       (rthm3 (morph-patterns (list rthm1 rthm2) 100 nil t len (wt len 4 .3)))
-       (rthm4 (morph-patterns (list rthm1 rthm2) 100 nil t len (wt len 5 .3)))
-       (rthm5 (morph-patterns (list rthm1 rthm2) 100 nil t len (wt len 6 .3)))
+       (rthm3 (morph-patterns (list rthm1 rthm2) 100 nil t len nil (wt len 4 .3)))
+       (rthm4 (morph-patterns (list rthm1 rthm2) 100 nil t len nil (wt len 5 .3)))
+       (rthm5 (morph-patterns (list rthm1 rthm2) 100 nil t len nil (wt len 6 .3)))
        (breaks0 (avoid-repetition (wt 30 '(15 10 1 12 1))))
        (indices (cdr (loop for i from 0 and k = (length breaks0) then (- k i)
 		     until (<= k 0) collect k)))
@@ -85,11 +85,11 @@
   (setf rthm3 (get-durations (append breaks rthm3)))
   (setf rthm4 (get-durations (append breaks rthm4)))
   (setf rthm5 (get-durations (append breaks rthm5)))
-  (setf rthm2pat01 (morph-patterns (list rthm3 pattern0) len nil t nil
+  (setf rthm2pat01 (morph-patterns (list rthm3 pattern0) len nil t nil nil
 				   (fibonacci-transition 40)))
-  (setf rthm2pat02 (morph-patterns (list rthm4 pattern0) len nil t nil
+  (setf rthm2pat02 (morph-patterns (list rthm4 pattern0) len nil t nil nil
 				   (fibonacci-transition 70)))
-  (setf rthm2pat03 (morph-patterns (list rthm5 pattern0) len nil t nil
+  (setf rthm2pat03 (morph-patterns (list rthm5 pattern0) len nil t nil nil
 				   (fibonacci-transition 100)))
   (setf ls (list rthm3 rthm4 rthm5))
   (setf ls1 (list rthm2pat01 rthm2pat02 rthm2pat03))
@@ -105,9 +105,9 @@
        (spattern1 '(0 0 0 0 5))
        (pattern2 '(.3 .3 .3 .1))
        ;;(spattern2 '(0 0 0 5))
-       (pattern3 (morph-patterns (list pattern1 pattern2) 60 nil t nil
+       (pattern3 (morph-patterns (list pattern1 pattern2) 60 nil t nil nil
 				 (fibonacci-transition 120)))
-       (pattern4 (morph-patterns (list pattern1 pattern2) 60 nil t nil
+       (pattern4 (morph-patterns (list pattern1 pattern2) 60 nil t nil nil
 				 (fibonacci-transition 80)))
        (len1 (length pattern1))
        ;;(len2 (length pattern2))
@@ -161,8 +161,8 @@
        (dur (- (startn 3) (startn 2)))
        #|(ls1 (morph-patterns `(,pt3 ,pt1) dur nil t nil))
        (ls2 (morph-patterns `(,pt3 ,pt2) dur nil t nil))
-       (ls3 (morph-patterns `(,pt4 ,pt2) dur nil t nil (wt 20 2)))
-       (ls4 (morph-patterns `(,pt4 ,pt1) dur nil t nil (wt 20 2)))|#
+       (ls3 (morph-patterns `(,pt4 ,pt2) dur nil t nil nil (wt 20 2)))
+       (ls4 (morph-patterns `(,pt4 ,pt1) dur nil t nil nil (wt 20 2)))|#
        (ls1 (interpolate-patterns (fibonacci-transitions 6 `(,pt3 ,pt1)) dur t))
        (ls2 (interpolate-patterns (fibonacci-transitions 8 `(,pt3 ,pt2)) dur t))
        (ls3 (interpolate-patterns (wt 7 `(,pt4 ,pt2) 1) dur t))
@@ -207,7 +207,7 @@
 	   dur2 nil sec2-ly3-durations))
 	 (rhythm3
 	  (morph-patterns (list *pattern4* *pattern1*)
-			  dur2 nil (fibonacci-transition dur2))))
+			  dur2 nil nil (fibonacci-transition dur2))))
     (declare (special rhythm1 rhythm2 rhythm3 startn2))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 1, Intro
