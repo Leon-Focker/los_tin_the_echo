@@ -207,7 +207,7 @@
 	   dur2 nil sec2-ly3-durations))
 	 (rhythm3
 	  (morph-patterns (list *pattern4* *pattern1*)
-			  dur2 nil nil (fibonacci-transition dur2))))
+			  dur2 nil nil nil nil (fibonacci-transition dur2))))
     (declare (special rhythm1 rhythm2 rhythm3 startn2))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 1, Intro

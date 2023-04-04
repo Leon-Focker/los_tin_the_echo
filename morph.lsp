@@ -29,6 +29,31 @@
 	  (t (mod x 1)))))
 (export 'mod1 :sc)
 
+;; ** envelope-interp
+;;; copied from the common lisp music package
+(defun envelope-interp (x fn &optional (base 1)) ;order of args is like NTH
+  (cond ((null fn) 0.0)			;no data -- return 0.0
+	((or (<= x (first fn))		;we're sitting on x val (or if < we blew it)
+	     (null (third fn)))		;or we're at the end of the list
+	 (second fn))			;so return current y value
+	((> (third fn) x)		;x <= next fn x axis value
+	 (if (= (second fn) (fourth fn))
+	     (second fn)		;y1=y0, so just return y0 (avoid endless calculations below)
+	   (if (= 1 base)		;linear envelope
+	       (+ (second fn)		;y0+(x-x0)*(y1-y0)/(x1-x0)
+		  (* (- x (first fn))
+		     (/ (- (fourth fn) (second fn))
+			(- (third fn) (first fn)))))
+	     (if (= 0 base)             ; step env
+		 (second fn)            ;   or 4th? 2nd mimics env, I think
+	       (+ (second fn)		;y0+[[[y1-y0] [-1.0 + [base ^ [x-x0]/[x1-x0]]] / [base-1]
+		  (* (/ (- (fourth fn) (second fn))
+			(- base 1.0))	;scaled y1-y0
+		     (- (expt base (/ (- x (first fn)) 
+				      (- (third fn) (first fn))))
+			1.0)))))))
+	(t (envelope-interp x (cddr fn) base))))	;go on looking for x segment
+
 ;; ** morph-patterns
 ;;; morph between two patterns, using a morphing-function,
 ;;; eg. fibonacci-transition. This morphing-function will determine which
@@ -142,20 +167,41 @@
 ;;; patterns - list of sublists containing durations - see morph-patterns
 ;;; duration - the sum of all durations in the result
 ;;;  -> the duration of the resulting sequence
+;;; overlap-duration - t will append the last rhythm without squeezing it
+;;;  perfectly into the given duration (no subtraction of last rhythm)
 ;;; transition-ratios - the duration of the interpolation between one pattern
 ;;;  and the next, relative to the duration of the result. This must be a list
 ;;;  with one less item than the patterns argument, so if you want to morph
 ;;;  three patterns, transition-ratios would initially be '(1 1) but could be
 ;;;  set to any list containing any two numbers.
+;;; transition-envelopes - this controlls the interpolation itself. If nil,
+;;;  normal linear interpolation is happening. If it is an envelope, the linear
+;;;  interpolation coefficient is set to (envelope-interp coeff env). If it is
+;;;  a list of envelopes, they are cycled through with mod. This can be useful
+;;;  for a million different things. A very simple usecase might be a slight
+;;;  swing in a drum pattern (using a static env '(0 .2)) for example. Rhythms
+;;; could also be humanized by very long varying envelopes with small changes.
 (defun interpolate-patterns (patterns duration
-			     &optional overlap-duration transition-ratios)
+			     &optional overlap-duration
+			       transition-ratios
+			       transition-envelopes)
   ;; sanity checks
   (if transition-ratios
       (unless (= (1- (length patterns)) (length transition-ratios))
 	(error "different number of pattern-transitions and transition-ratios ~
                 in interpolate-patterns: ~a, ~a"
 	       (1- (length patterns)) (length transition-ratios)))
-      (setf transition-ratios (loop repeat (1- (length patterns)) collect 1)))
+      (setf transition-ratios (sc::ml 1 (1- (length patterns)))))
+  (unless transition-envelopes (setf transition-envelopes '((0 0  1 1))))
+  (unless (listp transition-envelopes)
+    (error "transition-envelopes must be an envelope of a list of envelopes ~
+            but is ~a" transition-envelopes))
+  (unless (listp (first transition-envelopes))
+    (setf transition-envelopes (list transition-envelopes)))
+  ;; check that all envelopes have (= 0 (mod (length env) 2))
+  (unless (loop for i in transition-envelopes always (= 0 (mod (length i) 2)))
+    (error "interpolate-patterns detected a weird envelope in ~
+            transition-envelopes"))
   (unless (typep patterns 'list)
     (error "morph-patterns needs patterns to be a list: ~a" patterns))
   (unless (> duration 0)
@@ -164,14 +210,18 @@
 	 (trans-durs (loop for i in transition-ratios
 			collect (* (/ i ratio-sum) duration)))
 	 (trans-starts (append '(0) (loop for i in trans-durs
-				       sum i into sum collect sum))))
+				       sum i into sum collect sum)))
+	 (tr-env-len (length transition-envelopes)))
     ;; the fun part:
     (loop for i from 0
+       for env = (nth (mod i tr-env-len) transition-envelopes)
        for sum = 0 then (rational (+ sum rhythm))
        for n = (decider (/ sum duration) trans-durs)
-       for interp = (rational (/ (- sum (nth n trans-starts))
+       for interp = (envelope-interp
+		     (rational (/ (- sum (nth n trans-starts))
 				 (- (nth (1+ n) trans-starts)
 				    (nth n trans-starts))))
+		     env)
        for pattern1 = (nth n patterns)
        for pattern2 = (nth (1+ n) patterns)
        for event1 = (nth (mod i (length pattern1)) pattern1)
