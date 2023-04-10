@@ -121,21 +121,24 @@
   ;; the important part:
   (let* ((rhythms-list (patterns-to-rhythms-list patterns)))
     (loop for i from 0
-       for sum = 0 then (rational (+ sum (if (= 0 rhythm) 1 rhythm)))
+       for sum = 0 then (+ sum (if (= 0 rhythm) 1 (rational rhythm)))
        for key = (round (ly::mirrors (funcall morphing-function
 					      (if length i sum))
 				     0 (1- (length patterns))))
        for pattern = (nth key patterns)
        for rhythms = (nth key rhythms-list)
        ;; position relative to the pattern
-       for index = (let ((pat-dur (rational (loop for i in rhythms sum i))))
+       for index = (let ((pat-dur (loop for i in rhythms sum (rational i))))
 		     (if (not (= pat-dur 0))
-			 (decider (rescale (mod sum pat-dur)
-;;; to combat float-errors, maybe add (expt 10.0d0 -8)
-					   0
-					   pat-dur
-					   0
-					   1)
+			 (decider (rationalize (+ (rescale (mod sum pat-dur)
+							   0
+							   pat-dur
+							   0
+							   1)
+						  ;; i hate it but this is the
+						  ;; only way to combat
+						  ;; floating point errors
+						  (expt 10.0d0 -7)))
 				  rhythms)
 			 0))
        ;; rhythm is the duration of the event
@@ -153,7 +156,7 @@
        ;; add a difference, to bring sequence to its max length
        ;; if the rhythm-value was a rest, the added difference will
        ;; too be a rest
-	 (let* ((difference (rational (- duration sum))))
+	 (let* ((difference (- (rational duration) sum)))
 	   (unless (sc::equal-within-tolerance difference 0)
 	     (cond (overlap-duration (setf ls (append ls (list event))))
 		   ((atom event) (setf ls (append ls (list difference))))
@@ -180,7 +183,7 @@
 ;;;  a list of envelopes, they are cycled through with mod. This can be useful
 ;;;  for a million different things. A very simple usecase might be a slight
 ;;;  swing in a drum pattern (using a static env '(0 .2)) for example. Rhythms
-;;; could also be humanized by very long varying envelopes with small changes.
+;;;  could also be humanized by very long varying envelopes with small changes.
 (defun interpolate-patterns (patterns duration
 			     &optional overlap-duration
 			       transition-ratios
@@ -215,7 +218,7 @@
     ;; the fun part:
     (loop for i from 0
        for env = (nth (mod i tr-env-len) transition-envelopes)
-       for sum = 0 then (rational (+ sum rhythm))
+       for sum = 0 then (+ sum (rational rhythm))
        for n = (decider (/ sum duration) trans-durs)
        for interp = (envelope-interp
 		     (rational (/ (- sum (nth n trans-starts))
@@ -241,7 +244,7 @@
        ;; add a difference, to bring sequence to its max length
        ;; if the rhythm-value was a rest, the added difference will
        ;; too be a rest
-	 (let* ((difference (rational (- duration sum))))
+	 (let* ((difference (- (rational duration) sum)))
 	   (unless (sc::equal-within-tolerance difference 0)
 	     (cond (overlap-duration (setf ls (append ls (list event))))
 		   ((atom event) (setf ls (append ls (list difference))))

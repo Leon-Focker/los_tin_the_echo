@@ -61,13 +61,6 @@
 ;; ** load
 
 ;; load soundfiles and patterns
-(load "/E/code/feedback/soundfiles.lsp")
-(load "/E/code/feedback/patterns.lsp")
-(load "/E/code/feedback/utilities.lsp")
-(load "/E/code/feedback/transitions.lsp")
-(load "/E/code/feedback/generate-spatial-rf.lsp")
-(load "/E/code/feedback/score.lsp")
-
 (dolist (file '("soundfiles.lsp"
 		"utilities.lsp"
 		"patterns.lsp"
