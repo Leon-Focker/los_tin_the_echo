@@ -136,6 +136,12 @@
 (unless *re-analyse-soundfiles*
   (setf *percussive* (ly::load-from-file *percussive-txt*)))
 
+;; ** noise-floor
+(defparameter *noise-floor*
+  (setf *noise-floor*
+	(ly::make-stored-file 'noise-floor "/E/Keks_Feedback/samples/keks_noise.wav"
+			      :directory "")))
+
 (setf *re-analyse-soundfiles* nil)
 
 ;; EOF soundfiles.lsp
