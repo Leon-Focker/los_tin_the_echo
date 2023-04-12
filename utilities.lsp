@@ -219,7 +219,8 @@
 		    `(unless ,i
 		       (error "~&~a returned with nil in fplay" ',i)))
 	     ,@(loop for i from 1 to max-len collect
-		    `(when (<= ,(name-var-highest 'duration i all-vars) 0.0001)
+		    `(when (and ,(name-var-highest 'duration i all-vars)
+				(<= ,(name-var-highest 'duration i all-vars) 0.0001))
 		       (setf ,(name-var-highest 'condition i all-vars) nil))))
 	;; instrument calls:
 	(loop for i from 1 to max-len append

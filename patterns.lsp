@@ -19,14 +19,14 @@
    (loop for i from 0 to 80 collect i collect (expt (/ i 80) 0.3))
    (loop for i from 81 to 100 collect i collect (expt (/ (- 100 i) 20) 0.3))))
 
-(defun env-fun1 (breakpoint)
+(defun env-fun1 (breakpoint &optional (exponent 0.3))
   (let ((bp (max 0 (min 100 (round breakpoint)))))
     (append
      (if (= bp 0) '(0 1)
 	 (loop for i from 0 to bp
-	    collect i collect (expt (/ i bp) 0.3)))
+	    collect i collect (expt (/ i bp) exponent)))
      (loop for i from (1+ bp) to 100
-	collect i collect (expt (/ (- 100 i) (- 100 bp)) 0.3)))))
+	collect i collect (expt (/ (- 100 i) (- 100 bp)) exponent)))))
 
 ;; base should be between 0 and 1
 (defun env-expt (pow &optional (base 0) reverse? flip?)
