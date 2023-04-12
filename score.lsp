@@ -35,7 +35,7 @@
 						:duration (* 60 7.5)
 						:smallest 2))
 			    (form (cdr (reverse (ly::data st)))))
-(ly::visualize-structure st 1 "/E/code/feedback/structure_comp1.png")
+;;(ly::visualize-structure st 1 "/E/code/feedback/structure_comp1.png")
 		       form))
 
 (defparameter *sections* (first *form*))
@@ -52,6 +52,8 @@
 
 ;;; some custom startns
 (defparameter startn2 (- (startn 2) 1.95))
+(defparameter startn3 (+ (startn 3) 21))
+(defparameter startn4 (+ (startn 4) 27))
 
 ;; ** material
 
@@ -132,6 +134,7 @@
        (len2 (length ls2))
        (ls3 (procession len '(0 3 0.8 5)))
        (ls4 (wt (+ len 5) '(0 2.5 0.8 5 1) 0.5))
+       (ls-noise (interpolate-patterns `(,ls4 ,ls3) (* len 3) t ))
        (ls5 (wt len '(0 0.05 .1 .2 .35 .4)))
        (ls6 (wt len '(0 0.08 .15 .23 .3 .45)))
        (ls7 (wt (* len 2) (length (ly::data *pure-atoms*)))))
@@ -147,6 +150,8 @@
     (nth (mod i len) ls3))
   (defun rest-fun2 (i)
     (nth (mod i len) ls4))
+  (defun rest-fun2-noise (i)
+    (nth (mod i (* len 3)) ls-noise))
   (defun srt-fun1 (i)
     (+ 0.6 (nth (mod i len) ls5)))
   (defun srt-fun2 (i)
@@ -157,8 +162,11 @@
        (pt2 '(.1))
        (pt3 '(1))
        (pt4 '(.5))
-       ;;(pt5 '(.02))
+       (pt5 '(.02))
+       (pt6 '(.09))
+       (pt7 '(.145))
        (dur (- (startn 3) (startn 2)))
+       (dur2 (- startn3 (startn 2)))
        #|(ls1 (morph-patterns `(,pt3 ,pt1) dur nil t nil))
        (ls2 (morph-patterns `(,pt3 ,pt2) dur nil t nil))
        (ls3 (morph-patterns `(,pt4 ,pt2) dur nil t nil nil (wt 20 2)))
@@ -167,10 +175,22 @@
        (ls2 (interpolate-patterns (fibonacci-transitions 8 `(,pt3 ,pt2)) dur t))
        (ls3 (interpolate-patterns (wt 7 `(,pt4 ,pt2) 1) dur t))
        (ls4 (interpolate-patterns (wt 7 `(,pt4 ,pt1)) dur t))
+       (ls5 (interpolate-patterns `(,pt5 ,pt6 ,pt5 ,pt7 ,pt5 ,pt6 ,pt7) dur2 t '(1 2 3 2 5 6)))
+       (ls6 (interpolate-patterns `(,pt5 ,pt6 ,pt7 ,pt6 ,pt5 ,pt7) dur2 t '(1 2 3 2 5)))
+       (ls7 (morph-patterns `(,ls5 ,ls6) dur2 nil t nil nil (fibonacci-transition 8)))
+       (ls8 (morph-patterns `(,ls5 ,ls6) dur2 nil t nil nil (fibonacci-transition 9)))
+       (ls9 (morph-patterns `(,ls5 ,ls6) dur2 nil t nil nil (fibonacci-transition 10)))
+       (ls10 (morph-patterns `(,ls5 ,ls6) dur2 nil t nil nil (fibonacci-transition 11)))
        (len1 (length ls1))
        (len2 (length ls2))
        (len3 (length ls3))
-       (len4 (length ls4)))
+       (len4 (length ls4))
+       (len5 (length ls5))
+       (len6 (length ls6))
+       (len7 (length ls7))
+       (len8 (length ls8))
+       (len9 (length ls9))
+       (len10 (length ls10)))
   (defun br-rthms1 (i)
     (nth (mod i len1) ls1))
   (defun br-rthms2 (i)
@@ -178,7 +198,21 @@
   (defun br-rthms3 (i)
     (nth (mod i len3) ls3))
   (defun br-rthms4 (i)
-    (nth (mod i len4) ls4)))
+    (nth (mod i len4) ls4))
+  (defun br-rthms5 (i)
+    (nth (mod i len5) ls5))
+  (defun br-rthms6 (i)
+    (nth (mod i len6) ls6))
+  (defun br-rthms7 (i)
+    (nth (mod i len7) ls7))
+  (defun br-rthms8 (i)
+    (nth (mod i len8) ls8))
+  (defun br-rthms9 (i)
+    (nth (mod i len9) ls9))
+  (defun br-rthms10 (i)
+    (nth (mod i len10) ls10))
+  (defun br-rthms11 (i)
+    (nth (mod i len10) (reverse ls10))))
 
 ;; ** Generation
 
@@ -234,7 +268,38 @@
 			  (min (* (rest-fun2 i) mult) 5))
 		       (+ duration2
 			  (min (* (rest-fun2 i) mult) 5)))
-	       (degree 0 90))))
+	       (degree 0 90)
+	       (printing t))))
+    (with-mix () "/E/code/feedback/intro-noise" 0
+      (let* ((sound-list (reverse (ly::data *quiet-atoms*))))
+	(fplay (startn 0) (+ (startn 1) 20)
+	       (srt (srt-fun1 i))
+	       (amp-env (env-fun1 (- 90 (* 70 (expt line .5))) 1.2))
+	       (sound *noise-floor*)
+	       (pure-sound (nth (mod (sound-fun2 i) 18) sound-list)
+			   (nth (mod (sound-fun1 i) 18) sound-list))
+	       (start (+ (* (/ (sound-fun2 i) 18) 80) 1)
+		      (+ (* (/ (sound-fun1 i) 18) 80) 1))
+	       (stop-in (- startn2 time) (- startn2 time2))
+	       (dur (min (/ (ly::duration pure-sound) srt) 5 stop-in)
+		    (min (/ (ly::duration pure-sound2) srt) stop-in2))
+	       (duration (* dur 1)
+			 (* dur2 1))
+	       (mult (+ 1 (* (expt line 0.3) 2)))
+	       (rhythm (+ dur
+			  (min (* (rest-fun2-noise i) mult) 5))
+		       (+ dur2
+			  (min (* (rest-fun2-noise i) mult) 5)))
+	       (amp-mult (/ 1 (ly::peak pure-sound)) (/ 1 (ly::peak pure-sound2)))
+	       (amp-fade (if (> time (startn 1))
+			     (expt (/ (- time (startn 1))
+				      (- startn2 (startn 1)))
+				   2)
+			     1))
+	       (amp (* (dry-wet 0.05 .3 line) amp-mult amp-fade .02)
+		    (* (dry-wet 0.05 .3 line2) amp-mult amp-fade .015))
+	       (degree 0 90)
+	       (printing nil))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Part 2
 ;;; Building on Intro
@@ -249,7 +314,7 @@
 	     (sound (nth (sound-fun2 i) sounds)
 		    (nth (sound-fun2 i) sounds)
 		    (nth (sound-fun2 i) sounds))
-	     (amp .9)
+	     (amp .91)
 	     (amp-env *amp-env01*)
 	     (srt (srt-fun1 i) (srt-fun1 i) (srt-fun1 i))
 	     (stop-in (- startn2 time 2)
@@ -307,43 +372,95 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 3
     (with-mix () "/E/code/feedback/break" 0
-      (fplay startn2 (startn 3)
-	     (amp 0.7)
-	     (sound (nth 0 (reverse (ly::data *noise*)))
-		    (nth 1 (reverse (ly::data *noise*)))
-		    (nth 2 (reverse (ly::data *noise*)))
-		    (nth 3 (reverse (ly::data *noise*))))
-	     (rhythm (br-rthms1 i)
-		     (br-rthms2 i)
-		     (br-rthms3 i)
-		     (br-rthms4 i))
-	     (duration (rationalize (* rhythm (- 1 (expt line 2))))
-		       (rationalize (* rhythm2 (- 1 (expt line2 2))))
-		       (rationalize (* rhythm3 (- 1 (expt line3 2))))
-		       (rationalize (* rhythm4 (- 1 (expt line4 2)))))
-	     (start "0 then (+ start duration)"
-		    "0 then (ly::mirrors (+ start duration2) 0 4)"
-		    "0 then (ly::mirrors (+ start duration3) 0 2.5)"
-		    "0 then (ly::mirrors (+ start duration4) 0 4.5)")
-	     (amp-env *amp-env01*)
-	     #+nil(amp-env (if (< rhythm .2)
-			  '(0 0  5 1  90 1  100 0)
-			  '(0 0  99 1  100 0)))
-	     (degl (* 90 line 2) (* 90 line2 2) (* 90 line3 2) (* 90 line4 2))
-	     (degree (ly::mirrors (+ 0 degl) 0 90) (ly::mirrors (- 30 degl2) 0 90)
-		     (ly::mirrors (- 60 degl3) 0 90) (ly::mirrors (+ 90 degl4) 0 90))
-	     (printing nil)))
+      (let* ((sound-list (reverse (ly::data *noise*))))
+	(fplay startn2 (startn 3)
+	       (amp 0.7)
+	       (sound (nth 0 sound-list)
+		      (nth 1 sound-list)
+		      (nth 2 sound-list)
+		      (nth 3 sound-list))
+	       (rhythm (br-rthms1 i)
+		       (br-rthms2 i)
+		       (br-rthms3 i)
+		       (br-rthms4 i))
+	       (duration (rationalize (* rhythm (- 1 (expt line 2))))
+			 (rationalize (* rhythm2 (- 1 (expt line2 2))))
+			 (rationalize (* rhythm3 (- 1 (expt line3 2))))
+			 (rationalize (* rhythm4 (- 1 (expt line4 2)))))
+	       (start "0 then (+ start duration)"
+		      "0 then (ly::mirrors (+ start duration2) 0 4)"
+		      "0 then (ly::mirrors (+ start duration3) 0 2.5)"
+		      "0 then (ly::mirrors (+ start duration4) 0 4.5)")
+	       (amp-env *amp-env01*)
+	       #+nil(amp-env (if (< rhythm .2)
+				 '(0 0  5 1  90 1  100 0)
+				 '(0 0  99 1  100 0)))
+	       (degl (* 90 line 2) (* 90 line2 2) (* 90 line3 2) (* 90 line4 2))
+	       (degree (ly::mirrors (+ 0 degl) 0 90) (ly::mirrors (- 30 degl2) 0 90)
+		       (ly::mirrors (- 60 degl3) 0 90) (ly::mirrors (+ 90 degl4) 0 90))
+	       (printing nil))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; rhythms, leaking into next part.
+    (with-mix () "/E/code/feedback/break02" 0
+      (let* ((sound-list (reverse (ly::data *noise*))))
+	(fplay startn2 startn3 
+	       (sound (nth (+ 4 (* (round (funcall
+					   (ly::make-list-into-function
+					    (fibonacci-transition 10) 1)
+					   (- 1 line)))
+				   2))
+			   sound-list))
+	       #+nil(rhythm (br-rthms5 i)
+		       (br-rthms6 i)
+		       (br-rthms5 i)
+		       (br-rthms6 i))
+	       (rhythm (br-rthms7 i)
+		       (br-rthms8 i)
+		       (br-rthms9 i)
+		       (br-rthms10 i))
+	       (duration (rationalize (* rhythm (+ .001 (* 0.999 (- 1 (expt line .6)))))))
+	       (amp (+ 0 (* .71 (- 1 (expt line 1.2)))))
+	       (start "1 then (ly::mirrors (+ start duration) 1 4)"
+		      "2 then (ly::mirrors (+ start duration) 1 4)"
+		      "3 then (ly::mirrors (+ start duration) 1 4)"
+		      "4 then (ly::mirrors (+ start duration) 1 4)")
+	       (amp-env *amp-env01*)
+	       (degl (* 90 line 2) (* 90 line2 2) (* 90 line3 2) (* 90 line4 2))
+	       (degree (ly::mirrors degl 0 90) (ly::mirrors (+ 30 degl2) 0 90)
+		       (ly::mirrors (+ 60 degl3) 0 90) (ly::mirrors (- 90 degl4) 0 90))
+	       (printing nil))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; rhythms during 4th part.
+    (with-mix () "/E/code/feedback/rhythms" 0
+      (let* ((sound-list (reverse (ly::data *noise*))))
+	(fplay startn3 (+ startn4 52.5)
+	       (sound (nth 6 sound-list))
+	       (rhythm (* (br-rthms11 i) (- 1 (* (expt line 2) .4))))
+	       (srt (dry-wet .2 8 (expt line 2)))
+	       (duration (rationalize (if (> line .3) (* rhythm .01)
+					  (* rhythm (dry-wet 0.01 .2 (- line .6))))))
+	       (amp (dry-wet .05 .2 (expt line 1.2)))
+	       (start "1 then (ly::mirrors (+ start duration) 1 4)"
+		      "2 then (ly::mirrors (+ start duration) 1 4)"
+		      "3 then (ly::mirrors (+ start duration) 1 4)"
+		      "4 then (ly::mirrors (+ start duration) 1 4)")
+	       (amp-env (env-fun1 10 2))
+	       (degl (* 90 line 5) (* 90 line 5) (* 90 line 5) (* 90 line 5))
+	       (degree (ly::mirrors degl 0 90) (ly::mirrors (+ 30 degl2) 0 90)
+		       (ly::mirrors (+ 60 degl3) 0 90)
+		       (ly::mirrors (- 90 degl4) 0 90))
+	       (printing nil))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 4
 ;;; Condinuo again, but not quiet
     (with-mix () "/E/code/feedback/mid" 0
       (let* ((sound-list (reverse (ly::data *pure-atoms*))))
-        (fplay (startn 3) (startn 4)
+        (fplay (startn 3) startn4
 	       (srt (srt-fun1 i))
 	       (amp-env (env-fun1 (- 80 (* 70 (expt line .5)))))
-	       (sound (nth (mod (sound-fun2 i) 18) sound-list)
-		      (nth (mod (sound-fun1 i) 18) sound-list))
-	       (stop-in (- (startn 4) time) (- (startn 4) time2))
+	       (sound (nth (mod (sound-fun2 i) 39) sound-list)
+		      (nth (mod (sound-fun1 i) 39) sound-list))
+	       (stop-in (- startn4 time) (- startn4 time2))
 	       (duration (min (/ (ly::duration sound) srt) 5 stop-in)
 			 (min (/ (ly::duration sound2) srt) stop-in2))
 	       (amp-mult (/ 1 (ly::peak sound)) (/ 1 (ly::peak sound2)))
@@ -356,8 +473,58 @@
 			  (min (* (rest-fun2 i) mult) 5)))
 	       (degree 0 90))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;; Teil 4 - Remix
+;;; Re-using Intro
+    (with-mix () "/E/code/feedback/remix" 0
+      (let* ((sound-list (reverse (ly::data *pure-atoms*)))
+	     (intro (format nil "~a~a" *src-dir* "intro.wav"))
+	     (intro-noise (format nil "~a~a" *src-dir* "intro-noise.wav")))
+        (fplay (startn 3) startn4
+	       (srt (/ (srt-fun1 i) 2))
+	       (file intro intro-noise)
+	       (pure-sound (nth (mod (sound-fun2 i) 39) sound-list)
+			   (nth (mod (sound-fun1 i) 39) sound-list))
+	       (amp-env (env-fun1 (- 80 (* 70 (expt line .5)))))
+	       (stop-in (- startn4 time) (- startn4 time2))
+	       (duration (min (/ (ly::duration pure-sound) srt) 5 stop-in)
+			 (min (/ (ly::duration pure-sound2) srt) stop-in2))
+	       (start "0 then (+ start rhythm)"
+		      "0 then (+ start2 rhythm2)")
+	       (reverse t)
+	       (amp (+ 3 line))
+	       (mult (+ 1 (* (expt line 0.3) 2)))
+	       (rhythm (+ duration
+			  (min (* (rest-fun2-noise i) mult) 5))
+		       (+ duration2
+			  (min (* (rest-fun2-noise i) mult) 5)))
+	       (degree (nth (mod i 30) (procession 30 '(0 70 20 55 10 45 90)))
+		       (- 90 (nth (mod i 32)
+				  (procession 32 '(0 70 20 55 10 45 90))))))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    (with-mix () "/E/code/feedback/mid_dist" 0
+      (let* ((sound-list (loop for i in '(0 2 4 5 8 10) collect
+			      (nth i (reverse (ly::data *distorted*))))))
+	(fplay (startn 3) (startn 4)
+	       (srt (srt-fun1 i))
+	       (amp-env (env-fun1 (- 80 (* 70 (expt line .5)))))
+	       (sound (nth (mod (sound-fun2 i) 6) sound-list)
+		      (nth (mod (sound-fun1 i) 6) sound-list))
+	       (stop-in (- (startn 4) time) (- (startn 4) time2))
+	       (duration (min (/ (ly::duration sound) srt) 5 stop-in)
+			 (min (/ (ly::duration sound2) srt) stop-in2))
+	       (amp-mult (/ 1 (ly::peak sound)) (/ 1 (ly::peak sound2)))
+	       (amp (dry-wet 0.9 amp-mult (* line 0.5))
+		    (dry-wet (* line 0.7) amp-mult2 (* line2 0.5)))
+	       (mult (+ 1 (* (expt line 0.3) 2)))
+	       (rhythm (+ duration
+			  (min (* (rest-fun2 i) mult) 5))
+		       (+ duration2
+			  (min (* (rest-fun2 i) mult) 5)))
+	       (degree 90 0))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 5
 ;;; Intro again, but distorted ;)
+;;; check if it is possible to get rid of the unedited samples
     (with-mix () "/E/code/feedback/last" 0
       (sound-let
 	  ((dist ()			;(:scaled-to 0.95)
@@ -391,6 +558,31 @@
 	       (start (startn 4))
 	       (channel 0 1)
 	       (amp-env (env-expt .1 .1 nil t))
+	       (degree 0 90))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    (with-mix () "/E/code/feedback/bass-last" 0
+      (sound-let
+	  ((bass ()
+		 (let ((file "/E/Keks_Feedback/samples/distorted/cookies_distorted_05a.wav")
+		       (file2 "/E/Keks_Feedback/samples/distorted/cookies_distorted_03.wav")
+		       (time (+ (* 0.5 (- (startn 4) (startn 3))) (startn 3) 3.5))
+		       (time2 (+ (* 0.5 (- (startn 4) (startn 3))) (startn 3) 3))
+		       (srt 0.04312288)
+		       (srt2 0.036894996))
+		   (samp0 file time :amp 1 :amp-env *amp-env01* :srt srt :degree 45
+			  :start 2.12
+			  :duration (min (/ (ly::soundfile-duration file) srt)
+					 (- (startn 5) time)))
+		   (samp0 file2 time2 :amp 1.3 :amp-env *amp-env01* :srt srt2 :degree 45
+			  :start .25
+			  :duration (min (/ (ly::soundfile-duration file2) srt2)
+					 (- (startn 5) time2))))))
+	(fplay (startn 3) (- (startn 5) 3)
+	       (amp 1)
+	       (file bass)
+	       (duration (- (startn 5) 3 (startn 3)))
+	       (start (startn 3))
+	       (channel 0 1)
 	       (degree 0 90))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 6
