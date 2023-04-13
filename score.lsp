@@ -55,6 +55,28 @@
 (defparameter startn3 (+ (startn 3) 21))
 (defparameter startn4 (+ (startn 4) 27))
 
+;; ** mixer
+
+(defun fader (env &optional (line 0))
+  (if (numberp env)
+      env
+      (envelope-interp line env)))
+
+(defparameter *intro-f* 1)
+(defparameter *intro-n-f* 1)
+(defparameter *continuo-f* 1)
+(defparameter *continuo2-f* 1)
+(defparameter *bass-f* 1)
+(defparameter *break-f* 1)
+(defparameter *break02-f* 1)
+(defparameter *rhythms-f* 1)
+(defparameter *mid-f* 1)
+(defparameter *mid-dist-f* 1)
+(defparameter *remix-f* 1)
+(defparameter *last-f* 1)
+(defparameter *bass-last-f* 1)
+(defparameter *outro-f* 1)
+
 ;; ** material
 
 (defun wt (length levels &optional (e 0.8))
@@ -261,8 +283,10 @@
 					   (- startn2 (startn 1)))
 					2)
 			     1))
-	       (amp (* (dry-wet 0.9 amp-mult (* line 0.3)) amp-fade)
-		    (* (dry-wet (* line 0.7) amp-mult2 (* line2 0.3)) amp-fade))
+	       (fader (fader *intro-f* line) (fader *intro-f* line2))
+	       (amp (* (dry-wet 0.9 amp-mult (* line 0.3)) amp-fade fader)
+		    (* (dry-wet (* line 0.7) amp-mult2 (* line2 0.3)) amp-fade
+		       fader2))
 	       (mult (+ 1 (* (expt line 0.3) 2)))
 	       (rhythm (+ duration
 			  (min (* (rest-fun2 i) mult) 5))
@@ -296,8 +320,9 @@
 				      (- startn2 (startn 1)))
 				   2)
 			     1))
-	       (amp (* (dry-wet 0.05 .3 line) amp-mult amp-fade .02)
-		    (* (dry-wet 0.05 .3 line2) amp-mult amp-fade .015))
+	       (fader (fader *intro-n-f* line) (fader *intro-n-f* line2))
+	       (amp (* (dry-wet 0.05 .3 line) amp-mult amp-fade .02 fader)
+		    (* (dry-wet 0.05 .3 line2) amp-mult amp-fade .015 fader2))
 	       (degree 0 90)
 	       (printing nil))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -314,7 +339,9 @@
 	     (sound (nth (sound-fun2 i) sounds)
 		    (nth (sound-fun2 i) sounds)
 		    (nth (sound-fun2 i) sounds))
-	     (amp .91)
+	     (fader (fader *continuo-f* line) (fader *continuo-f* line2)
+		    (fader *continuo-f* line3))
+	     (amp (* .91 fader) (* .91 fader2) (* .91 fader3))
 	     (amp-env *amp-env01*)
 	     (srt (srt-fun1 i) (srt-fun1 i) (srt-fun1 i))
 	     (stop-in (- startn2 time 2)
@@ -340,7 +367,8 @@
 			 sounds))
 	     (duration (min (/ (ly::duration sound) srt)
 			    (- (startn 2) time)))
-	     (amp (if (> line .42) 0.9 0))
+	     (fader (fader *continuo2-f* line))
+	     (amp (* (if (> line .42) 0.9 0) fader))
 	     (amp-env *amp-env01*)
 	     (degree 45)
 	     (printing t)))
@@ -352,10 +380,12 @@
 	    (time2 (* 0.8059 (startn 2)))
 	    (srt 0.023181288)
 	    (srt2 0.0487395))
-	(samp0 file time :amp 1.3 :amp-env *amp-env01* :srt srt :degree 45
+	(samp0 file time :amp (* 1.3 (fader *bass-f*)) :amp-env *amp-env01* :srt srt
+	       :degree 45
 	       :duration (min (/ (ly::soundfile-duration file) srt)
 			      (- startn2 time)))
-	(samp0 file2 time2 :amp-env *amp-env01* :srt srt2 :degree 45
+	(samp0 file2 time2 :amp (* 1 (fader *bass-f*)) :amp-env *amp-env01* :srt srt2
+	       :degree 45
 	       :duration (min (/ (ly::soundfile-duration file2) srt2)
 			      (- startn2 time2)))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -374,7 +404,6 @@
     (with-mix () "/E/code/feedback/break" 0
       (let* ((sound-list (reverse (ly::data *noise*))))
 	(fplay startn2 (startn 3)
-	       (amp 0.7)
 	       (sound (nth 0 sound-list)
 		      (nth 1 sound-list)
 		      (nth 2 sound-list)
@@ -391,13 +420,18 @@
 		      "0 then (ly::mirrors (+ start duration2) 0 4)"
 		      "0 then (ly::mirrors (+ start duration3) 0 2.5)"
 		      "0 then (ly::mirrors (+ start duration4) 0 4.5)")
+	       (fader (fader *break-f* line) (fader *break-f* line2)
+		      (fader *break-f* line3) (fader *break-f* line4))
+	       (amp (* 0.7 fader) (* 0.7 fader2) (* 0.7 fader3) (* 0.7 fader4))
 	       (amp-env *amp-env01*)
 	       #+nil(amp-env (if (< rhythm .2)
 				 '(0 0  5 1  90 1  100 0)
 				 '(0 0  99 1  100 0)))
 	       (degl (* 90 line 2) (* 90 line2 2) (* 90 line3 2) (* 90 line4 2))
-	       (degree (ly::mirrors (+ 0 degl) 0 90) (ly::mirrors (- 30 degl2) 0 90)
-		       (ly::mirrors (- 60 degl3) 0 90) (ly::mirrors (+ 90 degl4) 0 90))
+	       (degree (ly::mirrors (+ 0 degl) 0 90)
+		       (ly::mirrors (- 30 degl2) 0 90)
+		       (ly::mirrors (- 60 degl3) 0 90)
+		       (ly::mirrors (+ 90 degl4) 0 90))
 	       (printing nil))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; rhythms, leaking into next part.
@@ -418,8 +452,13 @@
 		       (br-rthms8 i)
 		       (br-rthms9 i)
 		       (br-rthms10 i))
-	       (duration (rationalize (* rhythm (+ .001 (* 0.999 (- 1 (expt line .6)))))))
-	       (amp (+ 0 (* .71 (- 1 (expt line 1.2)))))
+	       (duration (rationalize
+			  (* rhythm (+ .001 (* 0.999 (- 1 (expt line .6)))))))
+	       (fader (fader *break02-f* line) (fader *break02-f* line2)
+		      (fader *break02-f* line3) (fader *break02-f* line4))
+	       (amp-mult (+ 0 (* .71 (- 1 (expt line 1.2)))))
+	       (amp (* amp-mult fader) (* amp-mult fader2)
+		    (* amp-mult fader3) (* amp-mult fader4))
 	       (start "1 then (ly::mirrors (+ start duration) 1 4)"
 		      "2 then (ly::mirrors (+ start duration) 1 4)"
 		      "3 then (ly::mirrors (+ start duration) 1 4)"
@@ -439,7 +478,8 @@
 	       (srt (dry-wet .2 8 (expt line 2)))
 	       (duration (rationalize (if (> line .3) (* rhythm .01)
 					  (* rhythm (dry-wet 0.01 .2 (- line .6))))))
-	       (amp (dry-wet .05 .2 (expt line 1.2)))
+	       (fader (fader *rhythms-f* line))
+	       (amp (* (dry-wet .05 .2 (expt line 1.2)) fader))
 	       (start "1 then (ly::mirrors (+ start duration) 1 4)"
 		      "2 then (ly::mirrors (+ start duration) 1 4)"
 		      "3 then (ly::mirrors (+ start duration) 1 4)"
@@ -464,8 +504,9 @@
 	       (duration (min (/ (ly::duration sound) srt) 5 stop-in)
 			 (min (/ (ly::duration sound2) srt) stop-in2))
 	       (amp-mult (/ 1 (ly::peak sound)) (/ 1 (ly::peak sound2)))
-	       (amp (dry-wet 0.9 amp-mult (* line 0.3))
-		    (dry-wet (* line 0.7) amp-mult2 (* line2 0.3)))
+	       (fader (fader *mid-f* line) (fader *mid-f* line2))
+	       (amp (* (dry-wet 0.9 amp-mult (* line 0.3)) fader)
+		    (* (dry-wet (* line 0.7) amp-mult2 (* line2 0.3)) fader2))
 	       (mult (+ 1 (* (expt line 0.3) 2)))
 	       (rhythm (+ duration
 			  (min (* (rest-fun2 i) mult) 5))
@@ -491,7 +532,8 @@
 	       (start "0 then (+ start rhythm)"
 		      "0 then (+ start2 rhythm2)")
 	       (reverse t)
-	       (amp (+ 3 line))
+	       (fader (fader *remix-f* line) (fader *remix-f* line2))
+	       (amp (* (+ 3 line) fader) (* (+ 3 line) fader2))
 	       (mult (+ 1 (* (expt line 0.3) 2)))
 	       (rhythm (+ duration
 			  (min (* (rest-fun2-noise i) mult) 5))
@@ -513,8 +555,9 @@
 	       (duration (min (/ (ly::duration sound) srt) 5 stop-in)
 			 (min (/ (ly::duration sound2) srt) stop-in2))
 	       (amp-mult (/ 1 (ly::peak sound)) (/ 1 (ly::peak sound2)))
-	       (amp (dry-wet 0.9 amp-mult (* line 0.5))
-		    (dry-wet (* line 0.7) amp-mult2 (* line2 0.5)))
+	       (fader (fader *mid-dist-f* line) (fader *mid-dist-f* line2))
+	       (amp (* (dry-wet 0.9 amp-mult (* line 0.5)) fader)
+		    (* (dry-wet (* line 0.7) amp-mult2 (* line2 0.5)) fader2))
 	       (mult (+ 1 (* (expt line 0.3) 2)))
 	       (rhythm (+ duration
 			  (min (* (rest-fun2 i) mult) 5))
@@ -537,7 +580,7 @@
 			(sound (nth (sound-fun2 i) sounds)
 			       (nth (sound-fun2 i) sounds)
 			       (nth (sound-fun2 i) sounds))
-			(amp .3) ;;(amp (- .8 (* (expt line .1) 0.7)))
+			(amp .3)
 			(amp-env (env-fun1 (+ 80 (* line 20))))
 			(srt (srt-fun1 i) (srt-fun1 i) (srt-fun1 i))
 			(stop-in (- (startn 5) time 2)
@@ -552,7 +595,8 @@
 			(degree 0 (+ 45 (* (- (mod i 2) .5) 90 (- 1 line2))) 90)
 			(printing nil))))
 	(fplay (startn 4) (- (startn 5) 3)
-	       (amp 8)
+	       (fader (fader *last-f* line))
+	       (amp (* 8 fader))
 	       (file dist)
 	       (duration (- (startn 5) 3 (startn 4)))
 	       (start (startn 4))
@@ -578,7 +622,8 @@
 			  :duration (min (/ (ly::soundfile-duration file2) srt2)
 					 (- (startn 5) time2))))))
 	(fplay (startn 3) (- (startn 5) 3)
-	       (amp 1)
+	       (fader (fader *bass-last-f* line))
+	       (amp fader)
 	       (file bass)
 	       (duration (- (startn 5) 3 (startn 3)))
 	       (start (startn 3))
@@ -598,8 +643,9 @@
 	       (duration (min (/ (ly::duration sound) srt) 5 stop-in)
 			 (min (/ (ly::duration sound2) srt) stop-in2))
 	       (amp-mult (/ 1 (ly::peak sound)) (/ 1 (ly::peak sound2)))
-	       (amp (dry-wet 0.9 amp-mult (* line 0.3))
-		    (dry-wet (* line 0.7) amp-mult2 (* line2 0.3)))
+	       (fader (fader *outro-f* line) (fader *outro-f* line2))
+	       (amp (* (dry-wet 0.9 amp-mult (* line 0.3)) fader)
+		    (* (dry-wet (* line 0.7) amp-mult2 (* line2 0.3)) fader2))
 	       (mult (+ 1 (* (expt line 0.3) 2)))
 	       (rhythm (+ duration
 			  (min (* (rest-fun2 i) mult) 5))

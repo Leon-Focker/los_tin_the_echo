@@ -254,6 +254,7 @@
 
 (export '(slippery-chicken
 	  morph-patterns
-	  interpolate-patterns))
+	  interpolate-patterns
+	  envelope-interp))
 
 ;; EOF morph.lsp
