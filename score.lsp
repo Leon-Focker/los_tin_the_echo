@@ -1,3 +1,4 @@
+
 ;; * SCORE
 ;;; Generation of the piece happens here, check out the documentation for each
 ;;; function to find out how things work :]
@@ -62,20 +63,24 @@
       env
       (envelope-interp line env)))
 
-(defparameter *intro-f* 1)
-(defparameter *intro-n-f* 1)
-(defparameter *continuo-f* 1)
-(defparameter *continuo2-f* 1)
-(defparameter *bass-f* 1)
-(defparameter *break-f* 1)
-(defparameter *break02-f* 1)
-(defparameter *rhythms-f* 1)
-(defparameter *mid-f* 1)
-(defparameter *mid-dist-f* 1)
-(defparameter *remix-f* 1)
+(defparameter *intro-f* 0.9)
+(defparameter *intro-n-f* 0.85)
+(defparameter *continuo-f* 0.8)
+(defparameter *continuo2-f* 0.8)
+(defparameter *bass-f* 0.8)
+(defparameter *break-f* 0.9)
+(defparameter *break02-f* 0.9)
+(defparameter *rhythms-f* 0.8)
+(defparameter *bridge-f* 0.6)
+(defparameter *mid-f* 0.6)
+(defparameter *mid-dist-f* .6)
+(defparameter *remix-f* .7)
 (defparameter *last-f* 1)
-(defparameter *bass-last-f* 1)
+(defparameter *bass-last-f* .85)
 (defparameter *outro-f* 1)
+
+;; prevent style-warnings:
+;;(defun :scaled-by ())
 
 ;; ** material
 
@@ -157,6 +162,7 @@
        (ls3 (procession len '(0 3 0.8 5)))
        (ls4 (wt (+ len 5) '(0 2.5 0.8 5 1) 0.5))
        (ls-noise (interpolate-patterns `(,ls4 ,ls3) (* len 3) t ))
+       (len-noise (length ls-noise))
        (ls5 (wt len '(0 0.05 .1 .2 .35 .4)))
        (ls6 (wt len '(0 0.08 .15 .23 .3 .45)))
        (ls7 (wt (* len 2) (length (ly::data *pure-atoms*)))))
@@ -173,7 +179,7 @@
   (defun rest-fun2 (i)
     (nth (mod i len) ls4))
   (defun rest-fun2-noise (i)
-    (nth (mod i (* len 3)) ls-noise))
+    (nth (mod i len-noise) ls-noise))
   (defun srt-fun1 (i)
     (+ 0.6 (nth (mod i len) ls5)))
   (defun srt-fun2 (i)
@@ -243,7 +249,8 @@
 ;;; TODO: Multichannel
 (with-sound (:header-type clm::mus-riff :sampling-rate 48000
 			  :output "/E/code/feedback/just_feed_it.wav"
-			  :channels 2 :play nil :scaled-to 0.95)
+			  :channels 2 :play nil :scaled-to 0.98
+			  :force-recomputation nil)
 ;;; times and durations
   (let* ((sec2-ly3-durations
 	  (get-durations-within (third *form*) (startn 1) (startn 2)))
@@ -298,31 +305,38 @@
       (let* ((sound-list (reverse (ly::data *quiet-atoms*))))
 	(fplay (startn 0) (+ (startn 1) 20)
 	       (srt (srt-fun1 i))
-	       (amp-env (env-fun1 (- 90 (* 70 (expt line .5))) 1.2))
+	       (amp-env (env-fun1 (- 90 (* 70 (expt line .5))) 1.2)
+			(env-fun1 (- 90 (* 70 (expt line .5))) 1.2)
+			(env-fun1 10 1.2)
+			(env-fun1 10 1.2))
 	       (sound *noise-floor*)
 	       (pure-sound (nth (mod (sound-fun2 i) 18) sound-list)
 			   (nth (mod (sound-fun1 i) 18) sound-list))
 	       (start (+ (* (/ (sound-fun2 i) 18) 80) 1)
 		      (+ (* (/ (sound-fun1 i) 18) 80) 1))
-	       (stop-in (- startn2 time) (- startn2 time2))
-	       (dur (min (/ (ly::duration pure-sound) srt) 5 stop-in)
-		    (min (/ (ly::duration pure-sound2) srt) stop-in2))
+	       ;;(stop-in (- startn2 time) (- startn2 time2))
+	       (dur (min (/ (ly::duration pure-sound) srt) 5)
+		    (/ (ly::duration pure-sound2) srt))
 	       (duration (* dur 1)
-			 (* dur2 1))
+			 (* dur2 1) 1 1)
 	       (mult (+ 1 (* (expt line 0.3) 2)))
 	       (rhythm (+ dur
 			  (min (* (rest-fun2-noise i) mult) 5))
 		       (+ dur2
-			  (min (* (rest-fun2-noise i) mult) 5)))
+			  (min (* (rest-fun2-noise i) mult) 5))
+		       dur dur2)
 	       (amp-mult (/ 1 (ly::peak pure-sound)) (/ 1 (ly::peak pure-sound2)))
 	       (amp-fade (if (> time (startn 1))
 			     (expt (/ (- time (startn 1))
 				      (- startn2 (startn 1)))
 				   2)
 			     1))
-	       (fader (fader *intro-n-f* line) (fader *intro-n-f* line2))
+	       (fader (fader *intro-n-f* line) (fader *intro-n-f* line2)
+		      (fader *intro-n-f* line3) (fader *intro-n-f* line4))
 	       (amp (* (dry-wet 0.05 .3 line) amp-mult amp-fade .02 fader)
-		    (* (dry-wet 0.05 .3 line2) amp-mult amp-fade .015 fader2))
+		    (* (dry-wet 0.05 .3 line2) amp-mult amp-fade .015 fader2)
+		    (* (dry-wet 0.02 .3 line3) fader3)
+		    (* (dry-wet 0.02 .3 line4) fader4))
 	       (degree 0 90)
 	       (printing nil))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -491,6 +505,26 @@
 		       (ly::mirrors (- 90 degl4) 0 90))
 	       (printing nil))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    (with-mix () "/E/code/feedback/bridge" 0
+      (let* ((sound-list (reverse (ly::data *pure-atoms*))))
+        (fplay startn2 (startn 3)
+	       (srt (srt-fun1 i))
+	       (amp-env (env-fun1 80))
+	       (sound (nth (mod (sound-fun2 i) 39) sound-list)
+		      (nth (mod (sound-fun1 i) 39) sound-list))
+	       (duration (min (/ (ly::duration sound) srt) 5)
+			 (/ (ly::duration sound2) srt))
+	       (amp-mult (/ 1 (ly::peak sound)) (/ 1 (ly::peak sound2)))
+	       (fader (fader *bridge-f* line) (fader *bridge-f* line2))
+	       (amp (* (dry-wet 0.9 amp-mult (* line 0.3)) fader)
+		    (* (dry-wet (* line 0.7) amp-mult2 (* line2 0.3)) fader2))
+	       (mult (+ 1 (* (expt line 0.3) 2)))
+	       (rhythm (+ duration
+			  (min (* (rest-fun2 i) mult) 5))
+		       (+ duration2
+			  (min (* (rest-fun2 i) mult) 5)))
+	       (degree 0 90))))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 4
 ;;; Condinuo again, but not quiet
     (with-mix () "/E/code/feedback/mid" 0
@@ -577,10 +611,11 @@
 				 (* (- 1 (expt line 0.3)) 5) 0))
 			(rhythm (+ add (rthms1 i 0)) (+ add (rthms1 i 1))
 				(+ add (rthms1 i 2)))
-			(sound (nth (sound-fun2 i) sounds)
-			       (nth (sound-fun2 i) sounds)
-			       (nth (sound-fun2 i) sounds))
-			(amp .3)
+			(n (sound-fun2 i))
+			(sound (nth n sounds)
+			       (nth n sounds)
+			       (nth n sounds))
+			(amp (+ .3 (if (= n 6) .2 0)))
 			(amp-env (env-fun1 (+ 80 (* line 20))))
 			(srt (srt-fun1 i) (srt-fun1 i) (srt-fun1 i))
 			(stop-in (- (startn 5) time 2)
@@ -660,7 +695,7 @@
 ;;; proof of concept for now
 ;;; split all tracks into mono tracks should make this usefull
 
-;;#|
+#|
 (in-package :sc)
 
 (write-spatial-reaper-file
@@ -675,6 +710,6 @@
 			  :angle-env '(0 .5  .5 1  .8 8.5  1 3.75)
 			  :elevation-env '(0 0.5  1 .5)))
  :ambi-order 3)
-;;|#
+|#
 
 ;; EOF score.lsp

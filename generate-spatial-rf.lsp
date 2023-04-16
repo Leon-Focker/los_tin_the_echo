@@ -1,6 +1,7 @@
 ;; * SPATIAL
 ;;; the purpose of this file is to automatically generate reaper files that
-;;; spatialize soundfiles using the IEM ambisonics plugins
+;;; spatialize soundfiles using the IEM ambisonics (or other spatial audio)
+;;; plugins.
 ;;; check out #'write-spatial-reaper-file below, if you want to use it.
 
 ;;; TODO
@@ -21,18 +22,6 @@
 ;; load a regex library
 (ql:quickload "cl-ppcre")
 
-;; some global variables (don't touch :P)
-(defparameter *spatial-reaper-tempo* 60)
-;; if nil - use individual-duration
-;; if > 0 - set every env to this duration :duration t
-;; if < 0 - end at (abs) of this time :end-times nil
-(defparameter *spatial-reaper-duration*  nil)
-(defparameter *spatial-reaper-use-starts* nil)
-(defparameter *stereo-encoder-fxid*
-  "{21BA0349-8E33-48D7-94BA-D648B035A6FF}")
-(defparameter *blue-ripple-O3A-decoder-fxid*
-  "{8898DF47-1C03-44CF-878F-50DE85568C55}")
-
 ;; *** read-file
 ;;; read an entire file (not just an s-expression) a into string and return it
 (defun read-file (infile)
@@ -41,6 +30,24 @@
       (let ((string (make-string (file-length instream))))
         (read-sequence string instream)
         string))))
+
+;; this is the (partially binary) data for the respective plugin, as it appears
+;; in a reaper project file:
+(defparameter *iem-stereo-encoder*
+  (read-file (format nil "~a~a" *src-dir* "iem-stereo-encoder.txt")))
+(defparameter *blue-ripple-decoder*
+  (read-file (format nil "~a~a" *src-dir* "blue-ripple.txt")))
+;; these IDs should be unique but it's probably not neccessary to change them:
+(defparameter *encoder-fxid* "{21BA0349-8E33-48D7-94BA-D648B035A6FF}")
+(defparameter *decoder-fxid* "{8898DF47-1C03-44CF-878F-50DE85568C55}")
+
+;; only thouch these if you know what you're doing:
+(defparameter *spatial-reaper-tempo* 60)
+;; if nil - use individual-duration
+;; if > 0 - set every env to this duration :duration t
+;; if < 0 - end at (abs) of this time :end-times nil
+(defparameter *spatial-reaper-duration*  nil)
+(defparameter *spatial-reaper-use-starts* nil)
 
 ;; ** Project
 ;;; first create a reaper project that contains all samples:
@@ -71,18 +78,6 @@
 
 ;; *** small adjustments
 
-;; not needed, since it can be seet in write-rf
-#+nil(defun set-samplerate (string &optional (samplerate 48000))
-  (let* ((scan1 (ppcre:create-scanner "SAMPLERATE [0-9]+"))
-	 (scan2 (ppcre:create-scanner "RENDER_FMT [0-9]+ [0-9]+ [0-9]+")))
-    (setf string
-	  (ppcre:regex-replace-all scan1 string
-			     (format nil "SAMPLERATE ~a"
-				     samplerate)))
-    (ppcre:regex-replace-all scan2 string
-			     (format nil "RENDER_FMT 0 2 ~a"
-				     samplerate))))
-
 (defun set-master-channels (string &optional (number-of-master-channels 16))
   (let* ((scan (ppcre:create-scanner "MASTER_NCH [0-9]+")))
     (ppcre:regex-replace-all scan string
@@ -95,31 +90,36 @@
 			     (format nil "NCHAN ~a"
 				     number-of-track-channels))))
 
-;; *** IEM-plugins
-;;; insert iem plugin on each track
-;;; encoder and decoder...
+;; *** insert plugins
 
-;; **** insert-plugins
-(defun insert-plugins
-    (string &optional
-	      (insert (format nil "~a~a" *src-dir* "add-iem.txt")))
+;; **** insert-plugins-all-tracks
+;;; insert plugin on every track except master
+(defun insert-plugin-all-tracks
+    (string &optional (plugin-data *iem-stereo-encoder*))
   (let* ((scan (ppcre:create-scanner "MAINSEND.{6,10}?<ITEM"
-	       :single-line-mode t)))
-    (ppcre:regex-replace-all scan string
-			     (format nil "MAINSEND 1 0 ~&~a~&<ITEM"
-				     (format nil (read-file insert)
-					     *stereo-encoder-fxid*)))))
-
-;; **** insert-master-plugin
-(defun insert-master-plugin
-    (string &optional
-	      (insert (format nil "~a~a" *src-dir* "blue-ripple.txt")))
-  (let* ((scan (ppcre:create-scanner "MASTER_SEL [0-9]+.{2,6}?<MASTERPLAYSPEEDENV"
 				     :single-line-mode t)))
-    (ppcre:regex-replace-all scan string
-			     (format nil "MASTER_SEL 0~&~a~&<MASTERPLAYSPEEDENV"
-				     (format nil (read-file insert)
-					     *blue-ripple-O3A-decoder-fxid*)))))
+    (ppcre:regex-replace-all
+     scan
+     string
+     (format nil "MAINSEND 1 0 ~&~a~&<ITEM"
+	     (format nil
+		     (read-file (format nil "~a~a" *src-dir* "track-fx.txt"))
+		     plugin-data
+		     *encoder-fxid*)))))
+
+;; **** insert-plugin-master
+(defun insert-plugin-master
+    (string &optional (plugin-data *blue-ripple-decoder*))
+  (let* ((scan (ppcre:create-scanner
+		"MASTER_SEL [0-9]+.{2,6}?<MASTERPLAYSPEEDENV"
+		:single-line-mode t)))
+    (ppcre:regex-replace-all
+     scan
+     string
+     (format nil "MASTER_SEL 0~&~a~&<MASTERPLAYSPEEDENV"
+	     (format nil (read-file (format nil "~a~a" *src-dir* "master-fx.txt"))
+		     plugin-data
+		     *decoder-fxid*)))))
 
 ;; *** faders
 (defun set-all-faders (string &optional (set-to .5))
@@ -236,12 +236,12 @@
 ;;; that doesn't have an envelope yet.
 (defun insert-envelopes (string spatial-sndfile)
   (let* ((scan (ppcre:create-scanner (format nil "FXID ~a.{2,8}?WAK "
-					     *stereo-encoder-fxid*)
+					     *encoder-fxid*)
 				     :single-line-mode t))
 	 (aut-env (write-automation-envelope spatial-sndfile)))
     (ppcre:regex-replace scan string
 			 (format nil "FXID ~a~&~a      WAK "
-				 *stereo-encoder-fxid*
+				 *encoder-fxid*
 				 aut-env))))
 
 ;; *** write-spatial-reaper-file
@@ -261,14 +261,17 @@
 ;;; samplerate - samplerate of the file.
 ;;; tempo - tempo of the file
 ;;; init-vol - Volume multiplier the faders will start at. Init is -12db (~.25)
-(defun write-spatial-reaper-file (spatial-sndfiles &key file
-						     use-start-times
-						     use-end-times
-						     duration
-						     (ambi-order 3)
-						     (samplerate 48000)
-						     (tempo 60)
-						     (init-vol .2511))
+(defun write-spatial-reaper-file
+    (spatial-sndfiles &key file
+			use-start-times
+			use-end-times
+			duration
+			(ambi-order 3)
+			(samplerate 48000)
+			(tempo 60)
+			(init-vol .2511)
+			(encoder *iem-stereo-encoder*)
+			(decoder *blue-ripple-decoder*))
   ;; sanity checks:
   (unless (and spatial-sndfiles (listp spatial-sndfiles))
     (error "spatial-sndfiles is not a list but ~a" spatial-sndfiles))
@@ -312,8 +315,8 @@
 	 ; string (set-samplerate string samplerate)
 	  string (set-master-channels string channel-nr)
 	  string (set-track-channels string channel-nr)
-	  string (insert-master-plugin string)
-	  string (insert-plugins string)
+	  string (insert-plugin-master string decoder)
+	  string (insert-plugin-all-tracks string encoder)
 	  string (set-all-faders string init-vol))
     ;; create all envelopes
     (loop for snd in spatial-sndfiles do
@@ -325,6 +328,7 @@
 
 ;; ** EXAMPLE
 
+#|
 (write-spatial-reaper-file
  `(,(make-spatial-sndfile (format nil "~a~a" *src-dir* "intro.wav")
 			  :angle-env '(0 0  .5 .5  .8 4  1 3.5)
@@ -340,5 +344,6 @@
  :use-start-times t
  :use-end-times t
  :duration 10)
+|#
 
 ;; EOF generate-spatial-rf.lsp

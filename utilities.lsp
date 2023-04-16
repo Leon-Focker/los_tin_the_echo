@@ -201,7 +201,7 @@
 	all-vars)
        ;; add all other variables that are not set through arg-list
        (merge-var-lists
-	'((sfl *percussive*) (sound (first (ly::data sfl))) (rhythm 1000)
+	'((sfl nil) (sound (first (ly::data sfl))) (rhythm 1000)
 	  (duration nil) (reflect nil) (reverse nil) (start 0) (end 0) (srt 1)
 	  (width 5) (srt-env '(0 0 100 0)) (srt-scaler 1.0) (amp 1.0)
 	  (amp-env '(0 1 100 1)) (degree 45) (distance 0) (rev-env '(0 1 100 1))
@@ -215,7 +215,7 @@
 		(list (loop for i from 0 below (max 2 (length rthm)) collect
 			   (if (= 0 i) 'or (name-var 'condition i)))))
 	;; error cases:
-	`(do ,@(loop for i in '(rhythm file sfl) collect
+	`(do ,@(loop for i in '(rhythm file) collect
 		    `(unless ,i
 		       (error "~&~a returned with nil in fplay" ',i)))
 	     ,@(loop for i from 1 to max-len collect
