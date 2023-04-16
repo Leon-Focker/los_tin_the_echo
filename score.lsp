@@ -1,4 +1,3 @@
-
 ;; * SCORE
 ;;; Generation of the piece happens here, check out the documentation for each
 ;;; function to find out how things work :]
@@ -63,8 +62,8 @@
       env
       (envelope-interp line env)))
 
-(defparameter *intro-f* 0.9)
-(defparameter *intro-n-f* 0.85)
+(defparameter *intro-f* 1)
+(defparameter *intro-n-f* 0.55)
 (defparameter *continuo-f* 0.8)
 (defparameter *continuo2-f* 0.8)
 (defparameter *bass-f* 0.8)
@@ -186,11 +185,11 @@
     (+ 0.6 (nth (mod i len) ls6))))
 
 ;; break rhythms
-(let* ((pt1 '(.05))
-       (pt2 '(.1))
-       (pt3 '(1))
-       (pt4 '(.5))
-       (pt5 '(.02))
+(let* ((pt1 '(.05 .03))
+       (pt2 '(.1 .023))
+       (pt3 '(1 .7))
+       (pt4 '(.5 .1))
+       (pt5 '(.02 .01))
        (pt6 '(.09))
        (pt7 '(.145))
        (dur (- (startn 3) (startn 2)))
@@ -240,12 +239,12 @@
   (defun br-rthms10 (i)
     (nth (mod i len10) ls10))
   (defun br-rthms11 (i)
-    (nth (mod i len10) (reverse ls10))))
+    (nth (mod i len10) (reverse ls10)))
+  (defun br-rthms12 (i)
+    (nth (mod i len9) (reverse ls9))))
 
 ;; ** Generation
 
-;;; Transitions:
-;;; autoc - pitch estimation (Bret Battey) - autoc.ins ???
 ;;; TODO: Multichannel
 (with-sound (:header-type clm::mus-riff :sampling-rate 48000
 			  :output "/E/code/feedback/just_feed_it.wav"
@@ -300,44 +299,50 @@
 		       (+ duration2
 			  (min (* (rest-fun2 i) mult) 5)))
 	       (degree 0 90)
-	       (printing t))))
+	       (printing nil))))
     (with-mix () "/E/code/feedback/intro-noise" 0
       (let* ((sound-list (reverse (ly::data *quiet-atoms*))))
-	(fplay (startn 0) (+ (startn 1) 20)
+	(fplay (startn 0) startn2 ;;(+ (startn 1) 20)
 	       (srt (srt-fun1 i))
 	       (amp-env (env-fun1 (- 90 (* 70 (expt line .5))) 1.2)
 			(env-fun1 (- 90 (* 70 (expt line .5))) 1.2)
-			(env-fun1 10 1.2)
-			(env-fun1 10 1.2))
+			(env-fun1 75 1.2)
+			(env-fun1 75 1.2))
 	       (sound *noise-floor*)
 	       (pure-sound (nth (mod (sound-fun2 i) 18) sound-list)
 			   (nth (mod (sound-fun1 i) 18) sound-list))
 	       (start (+ (* (/ (sound-fun2 i) 18) 80) 1)
 		      (+ (* (/ (sound-fun1 i) 18) 80) 1))
-	       ;;(stop-in (- startn2 time) (- startn2 time2))
 	       (dur (min (/ (ly::duration pure-sound) srt) 5)
 		    (/ (ly::duration pure-sound2) srt))
-	       (duration (* dur 1)
-			 (* dur2 1) 1 1)
+	       (duration (* dur 1.2)
+			 (* dur2 1.2)
+			 (dry-wet dur (* line 12) line)
+			 (dry-wet dur2 (* line2 12) line2))
 	       (mult (+ 1 (* (expt line 0.3) 2)))
 	       (rhythm (+ dur
 			  (min (* (rest-fun2-noise i) mult) 5))
 		       (+ dur2
 			  (min (* (rest-fun2-noise i) mult) 5))
-		       dur dur2)
-	       (amp-mult (/ 1 (ly::peak pure-sound)) (/ 1 (ly::peak pure-sound2)))
-	       (amp-fade (if (> time (startn 1))
+		       (+ dur i)
+		       (+ dur2 i))
+	       (amp-mult (/ 1 (ly::peak pure-sound)) (/ 1 (ly::peak pure-sound2))
+			 (/ 1 (ly::peak pure-sound)) (/ 1 (ly::peak pure-sound2)))
+	       (amp-fade (if (<= time (startn 1)) 1
 			     (expt (/ (- time (startn 1))
 				      (- startn2 (startn 1)))
-				   2)
-			     1))
+				   2))
+			 (if (<= time2 (startn 1)) 1
+			     (expt (/ (- time2 (startn 1))
+				      (- startn2 (startn 1)))
+				   2)))
 	       (fader (fader *intro-n-f* line) (fader *intro-n-f* line2)
 		      (fader *intro-n-f* line3) (fader *intro-n-f* line4))
 	       (amp (* (dry-wet 0.05 .3 line) amp-mult amp-fade .02 fader)
 		    (* (dry-wet 0.05 .3 line2) amp-mult amp-fade .015 fader2)
-		    (* (dry-wet 0.02 .3 line3) fader3)
-		    (* (dry-wet 0.02 .3 line4) fader4))
-	       (degree 0 90)
+		    (* (dry-wet 0.02 .3 line3) fader3 amp-fade2)
+		    (* (dry-wet 0.02 .3 line4) fader4 amp-fade2))
+	       (degree 0 90 0 90)
 	       (printing nil))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Part 2
@@ -438,15 +443,12 @@
 		      (fader *break-f* line3) (fader *break-f* line4))
 	       (amp (* 0.7 fader) (* 0.7 fader2) (* 0.7 fader3) (* 0.7 fader4))
 	       (amp-env *amp-env01*)
-	       #+nil(amp-env (if (< rhythm .2)
-				 '(0 0  5 1  90 1  100 0)
-				 '(0 0  99 1  100 0)))
 	       (degl (* 90 line 2) (* 90 line2 2) (* 90 line3 2) (* 90 line4 2))
 	       (degree (ly::mirrors (+ 0 degl) 0 90)
 		       (ly::mirrors (- 30 degl2) 0 90)
 		       (ly::mirrors (- 60 degl3) 0 90)
 		       (ly::mirrors (+ 90 degl4) 0 90))
-	       (printing nil))))
+	       (printing nil nil))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; rhythms, leaking into next part.
     (with-mix () "/E/code/feedback/break02" 0
@@ -458,10 +460,6 @@
 					   (- 1 line)))
 				   2))
 			   sound-list))
-	       #+nil(rhythm (br-rthms5 i)
-		       (br-rthms6 i)
-		       (br-rthms5 i)
-		       (br-rthms6 i))
 	       (rhythm (br-rthms7 i)
 		       (br-rthms8 i)
 		       (br-rthms9 i)
@@ -488,22 +486,32 @@
       (let* ((sound-list (reverse (ly::data *noise*))))
 	(fplay startn3 (+ startn4 52.5)
 	       (sound (nth 6 sound-list))
-	       (rhythm (* (br-rthms11 i) (- 1 (* (expt line 2) .4))))
+	       (rthm (* (br-rthms11 i) (- 1 (* (expt line 2) .4)))
+		     (* (br-rthms12 i) (- 1 (* (expt line 2) .4))))
+	       (rhythm rthm rthm rthm rthm rthm2 rthm2 rthm2 rthm2)
 	       (srt (dry-wet .2 8 (expt line 2)))
 	       (duration (rationalize (if (> line .3) (* rhythm .01)
 					  (* rhythm (dry-wet 0.01 .2 (- line .6))))))
 	       (fader (fader *rhythms-f* line))
-	       (amp (* (dry-wet .05 .2 (expt line 1.2)) fader))
+	       (amp (* (dry-wet .03 .15 (expt line 1.2)) fader))
 	       (start "1 then (ly::mirrors (+ start duration) 1 4)"
+		      "2 then (ly::mirrors (+ start duration) 1 4)"
+		      "3 then (ly::mirrors (+ start duration) 1 4)"
+		      "4 then (ly::mirrors (+ start duration) 1 4)"
+		      "1 then (ly::mirrors (+ start duration) 1 4)"
 		      "2 then (ly::mirrors (+ start duration) 1 4)"
 		      "3 then (ly::mirrors (+ start duration) 1 4)"
 		      "4 then (ly::mirrors (+ start duration) 1 4)")
 	       (amp-env (env-fun1 10 2))
-	       (degl (* 90 line 5) (* 90 line 5) (* 90 line 5) (* 90 line 5))
+	       (degl (* 90 line 5) (* 90 line 5) (* 90 line 5) (* 90 line 5)
+		     (* 90 line 8) (* 90 line 8) (* 90 line 8) (* 90 line 8))
 	       (degree (ly::mirrors degl 0 90) (ly::mirrors (+ 30 degl2) 0 90)
 		       (ly::mirrors (+ 60 degl3) 0 90)
+		       (ly::mirrors (- 90 degl4) 0 90)
+		       (ly::mirrors degl 0 90) (ly::mirrors (+ 30 degl2) 0 90)
+		       (ly::mirrors (+ 60 degl3) 0 90)
 		       (ly::mirrors (- 90 degl4) 0 90))
-	       (printing nil))))
+	       (printing nil nil))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     (with-mix () "/E/code/feedback/bridge" 0
       (let* ((sound-list (reverse (ly::data *pure-atoms*))))
@@ -669,7 +677,7 @@
 ;;; Intro is Outro :P
     (with-mix () "/E/code/feedback/outro" 0
       (let* ((sound-list (reverse (ly::data *quiet-atoms*))))
-        (fplay (- (startn 5) 3) (startn 6)
+        (fplay (- (startn 5) 3) (- (startn 6) 7)
 	       (srt (srt-fun1 i))
 	       (amp-env (env-fun1 (- 80 (* 70 (expt line .5)))))
 	       (sound (nth (mod (sound-fun2 i) 18) sound-list)
@@ -681,6 +689,7 @@
 	       (fader (fader *outro-f* line) (fader *outro-f* line2))
 	       (amp (* (dry-wet 0.9 amp-mult (* line 0.3)) fader)
 		    (* (dry-wet (* line 0.7) amp-mult2 (* line2 0.3)) fader2))
+	       (reverse t)
 	       (mult (+ 1 (* (expt line 0.3) 2)))
 	       (rhythm (+ duration
 			  (min (* (rest-fun2 i) mult) 5))
