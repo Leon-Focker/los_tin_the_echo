@@ -38,4 +38,41 @@
        (+ (* (- 1 base) (if flip? (- 1 val) val))
 	  base)))
 
+;; srt-env function
+(defun srt-break (breakpoint new-val &optional (br-len .001))
+  (unless (and (numberp breakpoint) (numberp new-val))
+    (error "all arguments in srt-break should be numbers"))
+  (cond ((<= breakpoint 0) `(0 ,new-val 100 ,new-val))
+	((>= breakpoint (- 100 br-len)) `(0 0 100 0))
+	(t `(0 0 ,breakpoint 0 ,(+ breakpoint br-len) ,new-val 100 ,new-val))))
+
+;; this is stupid and useless:
+#+nil(defun srt-env (first-val before-break after-break last-val break-point
+		&optional (break-length 0))
+  (unless (and (numberp before-break) (numberp after-break)
+	       (numberp first-val) (numberp last-val)
+	       (numberp break-point) (numberp break-length))
+    (error "all arguments in srt-env should be numbers"))
+  (unless (<= 0 break-point 100) (error "breakpoint is out of bounds"))
+  (when (<= break-length 0) (setf break-length 0.001))
+  (let* ((nd (+ break-point break-length)))
+    (loop for i from 0 to 100
+       with flag-st
+       with flag-nd
+       when flag-st collect break-point
+       when flag-st collect before-break
+       when flag-nd collect nd
+       when flag-nd collect after-break
+       collect i
+       when (< i break-point) collect before-break
+       when (> i break-point) collect after-break
+       when (<= break-point i nd) collect
+	 (+ (* (/ (- i break-point) break-length) after-break)
+	    (* (- 1 (/ (- i break-point) break-length))
+	       before-break))
+       do (setf flag-st (and (<= break-point (1+ i) (1+ break-point))
+			     (not (= 0 (mod break-point 1))))
+		flag-nd (and (<= nd (1+ i) (1+ nd))
+			     (not (= 0 (mod nd 1))))))))
+
 ;; EOF pattterns.lsp
