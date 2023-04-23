@@ -11,7 +11,7 @@
 
 ;; ** dependencies
 
-;; Layers Package:
+;; Path to Layers Package:
 (load (cl::os-path "/E/code/layers/src/all.lsp"))
 
 ;; use all in one package
@@ -22,7 +22,7 @@
 (in-package :feedback)
 
 (defparameter *src-dir*
-  (directory-namestring (truename *load-pathname*)))
+  (ly::directory-name (namestring *load-pathname*)))
 
 ;; morph and interpolate patterns
 (load (probe-file (format nil "~a~a" *src-dir* "morph.lsp")))
@@ -66,7 +66,7 @@
 		"patterns.lsp"
 		"transitions.lsp"
 		"generate-spatial-rf.lsp"
-		"score.lsp"
+		;;"score.lsp"
 		))
   (load (probe-file (format nil "~a~a" *src-dir* file))))
 
