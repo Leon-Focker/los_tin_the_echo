@@ -233,39 +233,82 @@
 ;;; Teil 1, Intro
   (with-mix () "/E/code/feedback/intro" 0
     (let* ((sound-list (reverse (ly::data *quiet-atoms*))))
+		  (fplay (startn 0) startn2
+			 (srt (srt-fun1 i))
+			 (srt-env (if (<= 95 time 120)
+				      '(0 0 100 0)
+				      (srt-break (- 100 (* (expt line 2) 50))
+						 (srt-fun1 (1- i))))
+				  (if (<= 95 time2 120)
+				      '(0 0 100 0)
+				      (srt-break (- 100 (* (expt line2 2) 50))
+						 (srt-fun1 (1- i)))))
+			 (amp-env (env-fun1 (- 80 (* 70 (expt line .5)))))
+			 (sound (nth (mod (sound-fun2 i) 18) sound-list)
+				(nth (mod (sound-fun1 i) 18) sound-list))
+			 (stop-in (- startn2 time) (- startn2 time2))
+			 (duration (min (/ (ly::duration sound) srt) 5 stop-in)
+				   (min (/ (ly::duration sound2) srt) stop-in2))
+			 (amp-mult (/ 1 (ly::peak sound)) (/ 1 (ly::peak sound2)))
+			 (amp-fade (if (> time (startn 1))
+				       (expt (/ (- time (startn 1))
+						(- startn2 (startn 1)))
+					     2)
+				       1))
+			 (fader (fader *intro-f* line) (fader *intro-f* line2))
+			 (amp (* (dry-wet 0.9 amp-mult (* line 0.3)) amp-fade fader)
+			      (* (dry-wet (* line 0.7) amp-mult2 (* line2 0.3)) amp-fade
+				 fader2))
+			 (mult (+ 1 (* (expt line 0.3) 2)))
+			 (rhythm (+ duration
+				    (min (* (rest-fun2 i) mult) 5))
+				 (+ duration2
+				    (min (* (rest-fun2 i) mult) 5)))
+			 (degree 0 90)
+			 (printing t))))
+  #+nil(with-mix () "/E/code/feedback/intro" 0
+    (sound-let
+	((intro ()
+		(let* ((sound-list (reverse (ly::data *quiet-atoms*))))
+		  (fplay (startn 0) startn2
+			 (srt (srt-fun1 i))
+			 (srt-env (if (<= 95 time 120)
+				      '(0 0 100 0)
+				      (srt-break (- 100 (* (expt line 2) 50))
+						 (srt-fun1 (1- i))))
+				  (if (<= 95 time2 120)
+				      '(0 0 100 0)
+				      (srt-break (- 100 (* (expt line2 2) 50))
+						 (srt-fun1 (1- i)))))
+			 (amp-env (env-fun1 (- 80 (* 70 (expt line .5)))))
+			 (sound (nth (mod (sound-fun2 i) 18) sound-list)
+				(nth (mod (sound-fun1 i) 18) sound-list))
+			 (stop-in (- startn2 time) (- startn2 time2))
+			 (duration (min (/ (ly::duration sound) srt) 5 stop-in)
+				   (min (/ (ly::duration sound2) srt) stop-in2))
+			 (amp-mult (/ 1 (ly::peak sound)) (/ 1 (ly::peak sound2)))
+			 (amp-fade (if (> time (startn 1))
+				       (expt (/ (- time (startn 1))
+						(- startn2 (startn 1)))
+					     2)
+				       1))
+			 (fader (fader *intro-f* line) (fader *intro-f* line2))
+			 (amp (* (dry-wet 0.9 amp-mult (* line 0.3)) amp-fade fader)
+			      (* (dry-wet (* line 0.7) amp-mult2 (* line2 0.3)) amp-fade
+				 fader2))
+			 (mult (+ 1 (* (expt line 0.3) 2)))
+			 (rhythm (+ duration
+				    (min (* (rest-fun2 i) mult) 5))
+				 (+ duration2
+				    (min (* (rest-fun2 i) mult) 5)))
+			 (degree 0 90)
+			 (printing t)))))
       (fplay (startn 0) startn2
-	     (srt (srt-fun1 i))
-	     (srt-env (if (<= 95 time 120)
-			  '(0 0 100 0)
-			  (srt-break (- 100 (* (expt line 2) 50))
-				     (srt-fun1 (1- i))))
-		      (if (<= 95 time2 120)
-			  '(0 0 100 0)
-			  (srt-break (- 100 (* (expt line2 2) 50))
-				     (srt-fun1 (1- i)))))
-	     (amp-env (env-fun1 (- 80 (* 70 (expt line .5)))))
-	     (sound (nth (mod (sound-fun2 i) 18) sound-list)
-		    (nth (mod (sound-fun1 i) 18) sound-list))
-	     (stop-in (- startn2 time) (- startn2 time2))
-	     (duration (min (/ (ly::duration sound) srt) 5 stop-in)
-		       (min (/ (ly::duration sound2) srt) stop-in2))
-	     (amp-mult (/ 1 (ly::peak sound)) (/ 1 (ly::peak sound2)))
-	     (amp-fade (if (> time (startn 1))
-			   (expt (/ (- time (startn 1))
-				    (- startn2 (startn 1)))
-				 2)
-			   1))
-	     (fader (fader *intro-f* line) (fader *intro-f* line2))
-	     (amp (* (dry-wet 0.9 amp-mult (* line 0.3)) amp-fade fader)
-		  (* (dry-wet (* line 0.7) amp-mult2 (* line2 0.3)) amp-fade
-		     fader2))
-	     (mult (+ 1 (* (expt line 0.3) 2)))
-	     (rhythm (+ duration
-			(min (* (rest-fun2 i) mult) 5))
-		     (+ duration2
-			(min (* (rest-fun2 i) mult) 5)))
-	     (degree 0 90)
-	     (printing t))))
+	     (file intro)
+	     (file-len (clm::sound-duration file))
+	     (duration (min file-len (+ (nth (mod i 3) '(1000 30 10 100)) time)))
+	     (rhythm duration)
+	     (reverse (nth (mod i 2) '(nil t))))))
   (with-mix () "/E/code/feedback/intro-noise" 0
     (let* ((sound-list (reverse (ly::data *quiet-atoms*))))
       (fplay (startn 0) startn2 ;;(+ (startn 1) 20)
@@ -334,10 +377,10 @@
 	   (srt-env (srt-break (- 90 (* (expt line 2) 30))
 			       (- (/ (srt-fun1 (1+ i)) 2))
 			       (+ (* (expt line 2) .5) .001))
-		    (srt-break (- 90 (* (expt line2 2) 30))
+		    (srt-break (- 90 (* (expt line2 2) 40))
 			       (- (/ (srt-fun1 (1+ i)) 3))
 			       (+ (* (expt line2 2) .5) .001))
-		    (srt-break (- 90 (* (expt line3 2) 30))
+		    (srt-break (- 90 (* (expt line3 2) 35))
 			       (- (/ (srt-fun1 (1- i)) 2))
 			       (+ (* (expt line3 2) .5) .001)))
 	   (stop-in (- startn2 time 2)
@@ -385,25 +428,14 @@
 	     :duration (min (/ (ly::soundfile-duration file2) srt2)
 			    (- startn2 time2)))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  #+nil(with-mix () "/E/code/feedback/beat" 0
-	 (fplay (startn 1) (startn 2)
-		(amp 0.7)
-		(amp-env '(0 0  5 1  90 1  100 0))
-		(srt 10)
-		(sound (nth (spattern1 i) (reverse (ly::data *pure-atoms*))))
-		(rhythm (pattern3 i) (pattern4 i))
-		(duration (/ rhythm 3))
-		(degree 30 60)
-		(printig t)))
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 3
   (with-mix () "/E/code/feedback/break" 0
     (let* ((sound-list (reverse (ly::data *noise*))))
       (fplay startn2 (startn 3)
-	     (sound (nth 0 sound-list)
-		    (nth 1 sound-list)
-		    (nth 2 sound-list)
-		    (nth 3 sound-list))
+	     (sound (nth (mod i 10) sound-list)
+		    (nth (mod (+ i 1) 10) sound-list)
+		    (nth (mod (+ i 2) 10) sound-list)
+		    (nth (mod (+ i 3) 10) sound-list))
 	     (rhythm (br-rthms1 i)
 		     (br-rthms2 i)
 		     (br-rthms3 i)
@@ -516,6 +548,12 @@
     (let* ((sound-list (reverse (ly::data *pure-atoms*))))
       (fplay (startn 3) startn4
 	     (srt (srt-fun1 i))
+	     (srt-env (srt-break2 (- 50 (* (expt line 2) 50))
+				  (srt-fun1 (1- i))
+				  (+ (* (- 1 (expt line 2)) 1.5) .001))
+		      (srt-break2 (- 50 (* (expt line2 2) 50))
+				  (srt-fun1 (1- i))
+				  (+ (* (- 1 (expt line 2)) 1.5) .001)))
 	     (amp-env (env-fun1 (- 80 (* 70 (expt line .5)))))
 	     (sound (nth (mod (sound-fun2 i) 39) sound-list)
 		    (nth (mod (sound-fun1 i) 39) sound-list))
@@ -613,7 +651,7 @@
 				(min (/ (ly::duration sound3) srt3)
 				     stop-in3))
 		      (degree 0 (+ 45 (* (- (mod i 2) .5) 90 (- 1 line2))) 90)
-		      (printing nil))))
+		      (printing nil nil))))
       (fplay (startn 4) (- (startn 5) 3)
 	     (fader (fader *last-f* line))
 	     (amp (* 8 fader))
@@ -676,6 +714,129 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   )
 
+(defun remix-rthm (i)
+  (let* ((pt1 '(.4 .2 .1 .6 .2))
+	 (pt2 '(.1 .5 .3 .2))
+	 (morph (morph-patterns `(,pt1 ,pt2) (- (+ (startn 3) 20) startn2)
+				nil t nil nil ))
+	 (len (length morph)))
+  (nth (mod i len) morph)))
+
+(defun remix-srt (i)
+  (nth (mod i 6) '(.8 .81 .8 .78 .82 .79)))
+
+(with-sound (:header-type clm::mus-riff :sampling-rate 48000
+			  :output "/E/code/feedback/noise_rhythm.wav"
+			  :channels 2 :play nil :scaled-to 0.98
+			  :force-recomputation nil)
+  (fplay startn2 (+ (startn 3) 10)
+	 (file '"/E/feed_it/Samples/noise_06_continuous_x2.wav")
+	 (amp-env '(0 0 1 1 100 0))
+	 (amp (dry-wet (- 1 (remix-rthm i)) 0 line))
+	 (duration (* (remix-rthm i) .4))
+	 (rhythm duration)
+	 (reverse (= 1 (mod i 2)))
+	 (start line)
+	 (end (+ line duration))
+	 (channel 0 1)
+	 (degree 0 90)))
+
+(with-sound (:header-type clm::mus-riff :sampling-rate 48000
+			  :output "/E/code/feedback/break_remix.wav"
+			  :channels 2 :play nil :scaled-to 0.98
+			  :force-recomputation nil)
+  (fplay startn2 (+ (startn 3) 20)
+	 (file '"/E/code/feedback/break.wav")
+	 (amp-env '(0 0 99 1 100 0))
+	 (amp (dry-wet 1 (- 1 (remix-rthm i)) .5))
+	 (duration (* (remix-rthm i) .4))
+	 (rhythm duration)
+	 (reverse (= 1 (mod i 2)))
+	 (start time)
+	 (end (+ time duration))
+	 (channel 0 1)
+	 (degree 0 90)))
+
+(with-sound (:header-type clm::mus-riff :sampling-rate 48000
+			  :output "/E/code/feedback/break02_remix.wav"
+			  :channels 2 :play nil :scaled-to 0.98
+			  :force-recomputation nil)
+  (fplay startn2 (+ (startn 3) 20)
+	 (file '"/E/code/feedback/break02.wav")
+	 (amp-env '(0 0 99 1 100 0))
+	 (amp (dry-wet 1 (- 1 (remix-rthm i)) .5))
+	 (duration (* (remix-rthm i) .4))
+	 (rhythm duration)
+	 (reverse (= 1 (mod i 2)))
+	 (start time)
+	 (end (+ time duration))
+	 (channel 0 1)
+	 (degree 0 90)))
+
+;; REMIX
+;;; links und rechts unterschiedlich reversen
+(with-sound (:header-type clm::mus-riff :sampling-rate 48000
+			  :output "/E/code/feedback/just_feed_it-remix.wav"
+			  :channels 2 :play nil :scaled-to 0.98
+			  :force-recomputation nil)
+  (with-mix () "/E/code/feedback/break-remix" 0
+    (fplay (startn 0) (- (startn 6) 7)
+	   (file '"/E/code/feedback/break.wav")
+	   (srt (remix-srt i))
+	   (duration (min (- (- (startn 6) 6) time)
+			       (remix-rthm i)))
+	   (rhythm duration)
+	   (reverse (= 1 (mod i 2)))
+	   (start time)
+	   (end (+ time duration))
+	   (channel 0 1)
+	   (degree 0 90)
+	   ))
+  (with-mix () "/E/code/feedback/intro-remix" 0
+    (fplay (startn 0) (- (startn 6) 7)
+	   (file '"/E/code/feedback/intro.wav")
+	   (duration (min (- (- (startn 6) 6) time)
+			       (nth (mod i 8) '(89 10.9 72.1 7.3 13 4 23 10000))))
+	   (rhythm duration)
+	   (amp-env '(0 0  .5 1  99.5 1  100 0))
+	   (reverse (= 1 (mod i 2)))
+	   (start time)
+	   (end (+ time duration))
+	   (channel 0 1)
+	   (degree 0 90)
+	   ))
+  (with-mix () "/E/code/feedback/continuo-remix" 0
+    (fplay (startn 0) (- (startn 6) 7)
+	   (file '"/E/code/feedback/continuo.wav")
+	   (duration (min (- (- (startn 6) 6) time)
+			  (nth (mod i 10) '(89 10.9 39.1 6 28 7.3 20 4 26 1000)))
+		     (min (- (- (startn 6) 6) time)
+			  (nth (mod i 10) '(89 10.9 40.1 4.6 28.4 7.3 20 5 25 1000))))
+	   (rhythm duration duration2)
+	   (amp-env '(0 0  .5 1  99.5 1  100 0))
+	   (reverse (= 1 (mod i 2)))
+	   (start time time2)
+	   (end (+ time duration) (+ time2 duration2))
+	   (channel 0 1)
+	   (degree 0 90)
+	   )))
+
+#+nil(with-sound (:header-type clm::mus-riff :sampling-rate 48000
+			  :output "/E/feed_it/distorted_05a_x0.06486647.wav"
+			  :channels 2 :play nil :scaled-to 0.98
+			  :force-recomputation nil)
+  (clm::simple-src
+   "/E/Keks_Feedback/samples/distorted/cookies_distorted_05a.wav"
+   0 0.06486647 :width 100))
+
+#+nil(with-sound (:header-type clm::mus-riff :sampling-rate 48000
+			  :output "/E/feed_it/Samples/noise_06_continuous_x2.wav"
+			  :channels 2 :play nil :scaled-to 0.98
+			  :force-recomputation nil)
+  (clm::simple-src
+   "/E/feed_it/Samples/noise_06_continuous.wav"
+   0 2 :width 100))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 #+nil(with-sound (:header-type clm::mus-riff :sampling-rate 48000
 			  :output "/E/code/feedback/disruptor.wav"
@@ -709,26 +870,7 @@
 	   (rhythm rthm rthm2 rthm rthm2 rthm rthm2)
 	   (degree 0 90 0 90 0 90))))
 
-;; ** spatialize
+;; (load "/E/code/feedback/spatial.lsp")
 
-;;; proof of concept for now
-;;; split all tracks into mono tracks should make this usefull
-
-#|
-(in-package :sc)
-
-(write-spatial-reaper-file
- `(,(make-spatial-sndfile "/E/code/feedback/intro.wav"
-			  :angle-env '(0 0  .5 .5  .8 4  1 3.5)
-			  :elevation-env '(0 0  .6 .5  2 .5))
-    ,(make-spatial-sndfile "/E/code/feedback/continuo.wav"
-			  :angle-env '(0 0  .5 .5  .8 8  1 3.25)
-			  :elevation-env '(0 0.5  1 .5)
-			  :start-time 10)
-    ,(make-spatial-sndfile "/E/code/feedback/continuo2.wav"
-			  :angle-env '(0 .5  .5 1  .8 8.5  1 3.75)
-			  :elevation-env '(0 0.5  1 .5)))
- :ambi-order 3)
-|#
-
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; EOF score.lsp

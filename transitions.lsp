@@ -101,7 +101,13 @@
 ;;;  This controls which items can be chosen at any point. If 0, only the item
 ;;;  at that point in the original sequence is chosen, If 1, all items can be
 ;;;  chosen at the end of the transition.
-(defun window-transitions (total-items levels &optional (e 1) (window-size 0.5))
+;;; control-function - this should be a function with two arguments - total-items
+;;;  and levels, which will be called for the generation of the control-sequence
+;;;  instead of the linear/exponential standard function. Thus 'e will be ignored.
+;;;  the function must return a list!
+;;;  for example 'fibonacci-transitions or 'procession.
+(defun window-transitions (total-items levels &optional (e 1) (window-size 0.5)
+						control-function)
   ;; make sure that all arguments are valid:
   (unless (and (numberp total-items) (numberp e) (numberp window-size)
 	       (>= total-items 0) (>= e 0) (>= window-size 0))
@@ -124,10 +130,12 @@
     (setf window
 	  (round (* window-size total-levels))
 	  control
-	  (loop for i below 1 by (/ 1 total-items)
-	     ;; other control sequences might be fun:
-	     ;; collect (* (expt (sin (* i 20)) e) total-levels))
-	     collect (* (expt i e) total-levels))
+	  (if control-function
+	      (funcall control-function total-items total-levels)
+	      (loop for i below 1 by (/ 1 total-items)
+		    ;; other control sequences might be fun:
+		    ;; collect (* (expt (sin (* i 20)) e) total-levels))
+		    collect (* (expt i e) total-levels)))
 	  weights
 	  (make-array total-levels :initial-element 0)
 	  spread

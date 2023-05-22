@@ -201,7 +201,7 @@
 	all-vars)
        ;; add all other variables that are not set through arg-list
        (merge-var-lists
-	'((sfl nil) (sound (first (ly::data sfl))) (rhythm 1000)
+	'((sfl nil) (sound nil) (rhythm 1000)
 	  (duration nil) (reflect nil) (reverse nil) (start 0) (end 0) (srt 1)
 	  (width 5) (srt-env '(0 0 100 0)) (srt-scaler 1.0) (amp 1.0)
 	  (amp-env '(0 1 100 1)) (degree 45) (distance 0) (rev-env '(0 1 100 1))
@@ -254,12 +254,17 @@
 		 `(when ,(name-var-highest 'condition i all-vars)
 		    (format t "~&time: ~a"
 			    ,(name-var-highest 'time i all-vars))
-		    (format t "~&sound: ~a"
-			    (ly::id ,(name-var-highest 'sound i all-vars)))
+		    (when (equal (type-of ,(name-var-highest 'sound i all-vars))
+				 'layers:stored-file)
+			   (format t "~&sound: ~a"
+				   (ly::id ,(name-var-highest 'sound i
+							      all-vars))))
 		    (format t "~&duration: ~a"
 			    ,(name-var-highest 'duration i all-vars))
 		    (format t "~&srate-conversion: ~a"
 			    ,(name-var-highest 'srt i all-vars))
+		    (format t "~&reverse: ~a"
+			    ,(name-var-highest 'reverse i all-vars))
 		    (format t "~&degree: ~a"
 			    ,(name-var-highest 'degree i all-vars))))
 	  ;; increasing the different times:

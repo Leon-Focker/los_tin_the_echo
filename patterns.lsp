@@ -46,6 +46,13 @@
 	((>= breakpoint (- 100 br-len)) `(0 0 100 0))
 	(t `(0 0 ,breakpoint 0 ,(+ breakpoint br-len) ,new-val 100 ,new-val))))
 
+(defun srt-break2 (breakpoint old-val &optional (br-len .001))
+  (unless (and (numberp breakpoint) (numberp old-val))
+    (error "all arguments in srt-break should be numbers"))
+  (cond ((<= breakpoint 0) `(0 0 100 0))
+	((>= breakpoint (- 100 br-len)) `(0 ,old-val 100 ,old-val))
+	(t `(0 ,old-val ,breakpoint ,old-val ,(+ breakpoint br-len) 0 100 0))))
+
 ;; this is stupid and useless:
 #+nil(defun srt-env (first-val before-break after-break last-val break-point
 		&optional (break-length 0))

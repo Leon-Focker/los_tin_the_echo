@@ -130,7 +130,7 @@
        ;; position relative to the pattern
        for index = (let ((pat-dur (loop for i in rhythms sum (rational i))))
 		     (if (not (= pat-dur 0))
-			 (decider (rationalize (+ (rescale (mod sum pat-dur)
+			 (decider (min (rationalize (+ (rescale (mod sum pat-dur)
 							   0
 							   pat-dur
 							   0
@@ -138,7 +138,8 @@
 						  ;; i hate it but this is the
 						  ;; only way to combat
 						  ;; floating point errors
-						  (expt 10.0d0 -7)))
+						       (expt 10.0d0 -7)))
+				       1)
 				  rhythms)
 			 0))
        ;; rhythm is the duration of the event

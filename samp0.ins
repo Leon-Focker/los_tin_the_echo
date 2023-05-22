@@ -97,7 +97,7 @@
                 (floor (* *srate* end)))))
          |#
          ;; Input File Input/Output (I/O) Structure
-         (f (open-input* file :start (if (and reverse (zerop start))
+         (f (open-input* file :start (if reverse
                                          end-sample
                                          start-sample)
 			 :channel channel))

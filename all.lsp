@@ -65,7 +65,7 @@
 		"utilities.lsp"
 		"patterns.lsp"
 		"transitions.lsp"
-		"generate-spatial-rf.lsp"
+		;;"generate-spatial-rf.lsp" - now in slippery chicken
 		;;"score.lsp"
 		))
   (load (probe-file (format nil "~a~a" *src-dir* file))))
