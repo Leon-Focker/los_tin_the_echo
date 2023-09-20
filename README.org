@@ -1,0 +1,12 @@
+#+title: los tin the echo
+#+author: Leon Focker
+
+This is the score to the algorithmically composed piece of music [[https://leonfocker.de/works/los_tin_the_echo.html]["los tin the echo"]]. I use Lisp and the [[https://ccrma.stanford.edu/software/clm/][Common Lisp Music]],  [[https://michael-edwards.org/sc/][Slippery Chicken]] and [[https://github.com/Leon-Focker/layers][Layers]] Package. Additionally to this a sample library is needed and the paths to the samples must be changed in soundfiles.lsp
+
+** Installation
+
+CLM and Slippery Chicken and Layers must already be installed. Then copy the source code and run ".../all.lsp"
+
+** Contact
+
+If you have any questions contact me at [[mailto:contact@leonfocker.de][contact@leonfocker.de]]
