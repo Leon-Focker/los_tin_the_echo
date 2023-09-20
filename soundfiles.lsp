@@ -3,7 +3,7 @@
 ;;; This is an easy way of handling soundfiles. Look into the layers-package for
 ;;; more documentation.
 
-(in-package :feedback)
+(in-package :layers)
 
 ;; ** quiet-atoms
 
@@ -19,18 +19,18 @@
    :auto-scale-mapping nil
    :remap nil
    ;;:fft-size 4096
-   :f1 #'(lambda (sf) (/ (log (/ (+ (ly::dominant-frequency sf)
-				    (ly::centroid sf))
+   :f1 #'(lambda (sf) (/ (log (/ (+ (dominant-frequency sf)
+				    (centroid sf))
 				 2))
 			 12000))
-   :f2 #'(lambda (sf) (* (expt (ly::transient sf) 0.7)
+   :f2 #'(lambda (sf) (* (expt (transient sf) 0.7)
 			 0.6))
-   :f3 #'(lambda (sf) (- 1 (expt (ly::smoothness sf)
+   :f3 #'(lambda (sf) (- 1 (expt (smoothness sf)
 				 0.5))))
-  (ly::store-in-text-file *quiet-atoms* *quiet-atoms-txt*))
+  (store-in-text-file *quiet-atoms* *quiet-atoms-txt*))
 
 (unless *re-analyse-soundfiles*
-  (setf *quiet-atoms* (ly::load-from-file *quiet-atoms-txt*)))
+  (setf *quiet-atoms* (load-from-file *quiet-atoms-txt*)))
 
 ;; ** pure-atoms
 
@@ -46,18 +46,18 @@
    :auto-scale-mapping nil
    :remap nil
    ;;:fft-size 4096
-   :f1 #'(lambda (sf) (/ (log (/ (+ (ly::dominant-frequency sf)
-				    (ly::centroid sf))
+   :f1 #'(lambda (sf) (/ (log (/ (+ (dominant-frequency sf)
+				    (centroid sf))
 				 2))
 			 12000))
-   :f2 #'(lambda (sf) (* (expt (ly::transient sf) 0.7)
+   :f2 #'(lambda (sf) (* (expt (transient sf) 0.7)
 			 0.6))
-   :f3 #'(lambda (sf) (- 1 (expt (ly::smoothness sf)
+   :f3 #'(lambda (sf) (- 1 (expt (smoothness sf)
 				 0.5))))
-  (ly::store-in-text-file *pure-atoms* *pure-atoms-txt*))
+  (store-in-text-file *pure-atoms* *pure-atoms-txt*))
 
 (unless *re-analyse-soundfiles*
-  (setf *pure-atoms* (ly::load-from-file *pure-atoms-txt*)))
+  (setf *pure-atoms* (load-from-file *pure-atoms-txt*)))
 
 ;; ** distorted
 
@@ -73,18 +73,18 @@
    :auto-scale-mapping nil
    :remap nil
    ;;:fft-size 4096
-   :f1 #'(lambda (sf) (/ (log (/ (+ (ly::dominant-frequency sf)
-				    (ly::centroid sf))
+   :f1 #'(lambda (sf) (/ (log (/ (+ (dominant-frequency sf)
+				    (centroid sf))
 				 2))
 			 12000))
-   :f2 #'(lambda (sf) (* (expt (ly::transient sf) 0.7)
+   :f2 #'(lambda (sf) (* (expt (transient sf) 0.7)
 			 0.6))
-   :f3 #'(lambda (sf) (- 1 (expt (ly::smoothness sf)
+   :f3 #'(lambda (sf) (- 1 (expt (smoothness sf)
 				 0.5))))
-  (ly::store-in-text-file *distorted* *distorted-txt*))
+  (store-in-text-file *distorted* *distorted-txt*))
 
 (unless *re-analyse-soundfiles*
-  (setf *distorted* (ly::load-from-file *distorted-txt*)))
+  (setf *distorted* (load-from-file *distorted-txt*)))
 
 ;; ** noise
 (defparameter *noise* (make-stored-file-list 'noise nil))
@@ -98,18 +98,18 @@
    :auto-scale-mapping t
    :remap t
    ;;:fft-size 4096
-   :f1 #'(lambda (sf) (/ (log (/ (+ (ly::dominant-frequency sf)
-				    (ly::centroid sf))
+   :f1 #'(lambda (sf) (/ (log (/ (+ (dominant-frequency sf)
+				    (centroid sf))
 				 2))
 			 12000))
-   :f2 #'(lambda (sf) (* (expt (ly::transient sf) 0.7)
+   :f2 #'(lambda (sf) (* (expt (transient sf) 0.7)
 			 0.6))
-   :f3 #'(lambda (sf) (- 1 (expt (ly::smoothness sf)
+   :f3 #'(lambda (sf) (- 1 (expt (smoothness sf)
 				 0.5))))
-  (ly::store-in-text-file *noise* *noise-txt*))
+  (store-in-text-file *noise* *noise-txt*))
 
 (unless *re-analyse-soundfiles*
-  (setf *noise* (ly::load-from-file *noise-txt*)))
+  (setf *noise* (load-from-file *noise-txt*)))
 
 ;; ** percussive
 (defparameter *percussive* (make-stored-file-list 'percussive nil))
@@ -123,23 +123,23 @@
    :auto-scale-mapping t
    :remap t
    ;;:fft-size 4096
-   :f1 #'(lambda (sf) (/ (log (/ (+ (ly::dominant-frequency sf)
-				    (ly::centroid sf))
+   :f1 #'(lambda (sf) (/ (log (/ (+ (dominant-frequency sf)
+				    (centroid sf))
 				 2))
 			 12000))
-   :f2 #'(lambda (sf) (* (expt (ly::transient sf) 0.7)
+   :f2 #'(lambda (sf) (* (expt (transient sf) 0.7)
 			 0.6))
-   :f3 #'(lambda (sf) (- 1 (expt (ly::smoothness sf)
+   :f3 #'(lambda (sf) (- 1 (expt (smoothness sf)
 				 0.5))))
-  (ly::store-in-text-file *percussive* *percussive-txt*))
+  (store-in-text-file *percussive* *percussive-txt*))
 
 (unless *re-analyse-soundfiles*
-  (setf *percussive* (ly::load-from-file *percussive-txt*)))
+  (setf *percussive* (load-from-file *percussive-txt*)))
 
 ;; ** noise-floor
 (defparameter *noise-floor*
   (setf *noise-floor*
-	(ly::make-stored-file 'noise-floor "/E/Keks_Feedback/samples/keks_noise.wav"
+	(make-stored-file 'noise-floor "/E/Keks_Feedback/samples/keks_noise.wav"
 			      :directory "")))
 
 (setf *re-analyse-soundfiles* nil)

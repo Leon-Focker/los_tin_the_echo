@@ -1,50 +1,28 @@
 ;; * FEEDBACK
-;;; This is the infrastructure (and when finished the score) to an
-;;; algorithmically composed piece of music. I use Lisp and the Common Lisp
-;;; Music, Slippery Chicken and Layers Package. Additionally to this a sample
-;;; library is needed and the paths to the samples must be changed in
-;;; soundfiles.lsp
-
-;; This is free to use (credit would be much appreciated) and without any warranty.
-
-(in-package :sc)
 
 ;; ** dependencies
 
 ;; Path to Layers Package:
-(load (cl::os-path "/E/code/layers/src/all.lsp"))
+(load "/E/code/layers/src/all.lsp")
 
-;; use all in one package
-(defpackage :feedback
-  (:use :cl :sc)
-  (:nicknames :fb))
+(in-package :layers)
 
-(in-package :feedback)
+(defparameter *fb-src-dir*
+  (directory-name (namestring *load-pathname*)))
 
-(defparameter *src-dir*
-  (ly::directory-name (namestring *load-pathname*)))
-
+#|
 ;; morph and interpolate patterns
-(load (probe-file (format nil "~a~a" *src-dir* "morph.lsp")))
+;;(load (probe-file (format nil "~a~a" *fb-src-dir* "morph.lsp")))
 
 ;; Michael Edwards samp1 instrument, but you can select the input channel:
 ;; It would also be possible to use samp5 (slippery chicken).
-(load (compile-file (probe-file (format nil "~a~a" *src-dir* "samp0.ins"))))
+(load (compile-file (probe-file (format nil "~a~a" *fb-src-dir* "samp0.ins"))))
+|#
 
-(import '(ly::make-structure
-	  ly::make-stored-file
-	  ly::make-stored-file-list
-	  ly::store-file-in-list
-	  ly::compartmentalise
-	  ly::visualize-structure
-	  ly::decide-for-snd-file
-	  ly::get-sub-list-of-closest
-	  ly::folder-to-stored-file-list
-	  ly::mirrors
-	  clm::with-sound
+(import '(clm::with-sound
 	  clm::with-mix
 	  clm::sound-let
-	  clm::mix
+	  ;;clm::mix
 	  clm::*CLM-MIX-CALLS*
 	  clm::*CLM-MIX-OPTIONS*
 	  clm::add-sound
@@ -62,15 +40,12 @@
 
 ;; load soundfiles and patterns
 (dolist (file '("soundfiles.lsp"
-		"utilities.lsp"
 		"patterns.lsp"
-		"transitions.lsp"
-		;;"generate-spatial-rf.lsp" - now in slippery chicken
 		;;"score.lsp"
 		))
-  (load (probe-file (format nil "~a~a" *src-dir* file))))
+  (load (probe-file (format nil "~a~a" *fb-src-dir* file))))
 
 ;; YAY :)
 (format t "~&done loading!")
 
-;; EOF dependencies.lsp
+;; EOF all.lsp
