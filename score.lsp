@@ -36,7 +36,7 @@
 						:type 'compartmentalise
 						:duration (* 60 7.5)
 						:smallest 2))
-			    (form (cdr (reverse (data st)))))
+			    (form (reverse (data st))))
 		       ;;(visualize-structure st "/E/code/feedback/structure_comp1.png" 1)
 		       form))
 
