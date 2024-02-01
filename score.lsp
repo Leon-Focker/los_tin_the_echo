@@ -15,7 +15,7 @@
 ;; 4 rhythmic noise blocks (dist + noise)
 ;; 5 distortion (dist)
 ;; 6 short outro (quiet dist)
-(defparameter *form* (let* ((st (make-structure '(1 2 3 4 5 6)
+(defparameter *form* (let* ((st (make-fractal-structure '(1 2 3 4 5 6)
 						'((1 ((1)))
 						  (2 ((4 3 2 5)))
 						  (3 ((6)))
