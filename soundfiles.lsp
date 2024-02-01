@@ -9,7 +9,7 @@
 ;; ** quiet-atoms
 
 (defparameter *quiet-atoms* (make-stored-file-list 'quiet-atoms nil))
-(defparameter *quiet-atoms-txt* "/E/code/feedback/quiet-atoms.txt")
+(defparameter *quiet-atoms-txt* (format nil "~a~a" *fb-src-dir* "quiet-atoms.txt"))
 (unless (probe-file *quiet-atoms-txt*) (setf *re-analyse-soundfiles* t))
 (when *re-analyse-soundfiles*
   (folder-to-stored-file-list
@@ -36,7 +36,7 @@
 ;; ** pure-atoms
 
 (defparameter *pure-atoms* (make-stored-file-list 'pure-atoms nil))
-(defparameter *pure-atoms-txt* "/E/code/feedback/pure-atoms.txt")
+(defparameter *pure-atoms-txt* (format nil "~a~a" *fb-src-dir* "pure-atoms.txt"))
 (unless (probe-file *pure-atoms-txt*) (setf *re-analyse-soundfiles* t))
 (when *re-analyse-soundfiles*
   (folder-to-stored-file-list
@@ -63,7 +63,7 @@
 ;; ** distorted
 
 (defparameter *distorted* (make-stored-file-list 'distorted nil))
-(defparameter *distorted-txt* "/E/code/feedback/distorted.txt")
+(defparameter *distorted-txt* (format nil "~a~a" *fb-src-dir* "distorted.txt"))
 (unless (probe-file *distorted-txt*) (setf *re-analyse-soundfiles* t))
 (when *re-analyse-soundfiles*
   (folder-to-stored-file-list
@@ -89,7 +89,7 @@
 
 ;; ** noise
 (defparameter *noise* (make-stored-file-list 'noise nil))
-(defparameter *noise-txt* "/E/code/feedback/noise.txt")
+(defparameter *noise-txt* (format nil "~a~a" *fb-src-dir* "noise.txt"))
 (unless (probe-file *noise-txt*) (setf *re-analyse-soundfiles* t))
 (when *re-analyse-soundfiles*
   (folder-to-stored-file-list
@@ -114,7 +114,7 @@
 
 ;; ** percussive
 (defparameter *percussive* (make-stored-file-list 'percussive nil))
-(defparameter *percussive-txt* "/E/code/feedback/percussive.txt")
+(defparameter *percussive-txt* (format nil "~a~a" *fb-src-dir* "percussive.txt"))
 (unless (probe-file *percussive-txt*) (setf *re-analyse-soundfiles* t))
 (when *re-analyse-soundfiles*
   (folder-to-stored-file-list
@@ -138,10 +138,10 @@
   (setf *percussive* (load-from-file *percussive-txt*)))
 
 ;; ** noise-floor
+
 (defparameter *noise-floor*
-  (setf *noise-floor*
-	(make-stored-file 'noise-floor "/E/Keks_Feedback/samples/keks_noise.wav"
-			      :directory "")))
+  (make-stored-file 'noise-floor "/E/Keks_Feedback/samples/keks_noise.wav"
+		    :directory ""))
 
 (setf *re-analyse-soundfiles* nil)
 

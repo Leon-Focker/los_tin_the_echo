@@ -8,6 +8,10 @@
 
 ;; TODO: *distorted* contains raw samples (bc folder inside folder) :/
 
+(defparameter *bass-file-1* "/E/Keks_Feedback/samples/distorted/cookies_distorted_03.wav")
+(defparameter *bass-file-2* "/E/Keks_Feedback/samples/distorted/cookies_distorted_01a.wav")
+(defparameter *bass-file-3* "/E/Keks_Feedback/samples/distorted/cookies_distorted_05a.wav")
+
 ;; ** form
 ;; 1 intro (pure)
 ;; 2 rhythmen (pure + percussive)
@@ -273,12 +277,12 @@
 ;; ** Generation
 
 (with-sound (:header-type clm::mus-riff :sampling-rate 48000
-			  :output "/E/code/feedback/just_feed_it.wav"
+	     :output (format nil "~a~a" *fb-src-dir* "just_feed_it.wav")
 			  :channels 2 :play nil :scaled-to 0.98
 			  :force-recomputation nil)
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 1, Intro
-  (with-mix () "/E/code/feedback/intro" 0
+  (with-mix () (format nil "~a~a" *fb-src-dir* "intro") 0
     (let* ((sound-list (reverse (data *quiet-atoms*))))
 		  (fplay (startn 0) startn2
 			 (srt (srt-fun1 i))
@@ -318,7 +322,7 @@
 				(t (env-fun1 (- 80 (* 70 (expt line .5)))))))
 			 (degree 0 90)
 			 (printing t))))
-  (with-mix () "/E/code/feedback/intro-noise" 0
+  (with-mix () (format nil "~a~a" *fb-src-dir* "intro-noise") 0
     (let* ((sound-list (reverse (data *quiet-atoms*))))
       (fplay (startn 0) startn2 ;;(+ (startn 1) 20)
 	     (srt (srt-fun1 i))
@@ -368,7 +372,7 @@
 ;;; Part 2
 ;;; Building on Intro
 ;;; new srt-funs
-  (with-mix () "/E/feed_it/Samples/continuo" 0
+  (with-mix () (format nil "~a~a" *fb-src-dir* "continuo") 0
     (fplay (+ (startn 1) 5) startn2
 	   (sounds (reverse (data *quiet-atoms*)))
 	   (add (if (>= time (+ (startn 1) 15))
@@ -409,7 +413,7 @@
 	   (degree 0 (+ 45 (* (- (mod i 2) .5) 90 (- 1 line2))) 90)
 	   (printing t)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (with-mix () "/E/code/feedback/continuo2" 0
+  (with-mix () (format nil "~a~a" *fb-src-dir* "continuo2") 0
     (fplay (+ (startn 1) 5) (startn 2)
 	   (sounds (reverse (data *quiet-atoms*)))
 	   (add (if (>= time (+ (startn 1) 15))
@@ -426,9 +430,9 @@
 	   (degree 45)
 	   (printing t)))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (with-mix () "/E/code/feedback/bass" 0
-    (let ((file "/E/Keks_Feedback/samples/distorted/cookies_distorted_03.wav")
-	  (file2 "/E/Keks_Feedback/samples/distorted/cookies_distorted_01a.wav")
+  (with-mix () (format nil "~a~a" *fb-src-dir* "bass") 0
+    (let ((file *bass-file-1*)
+	  (file2 *bass-file-2*)
 	  (time (* 0.792 (startn 2)))
 	  (time2 (* 0.8059 (startn 2)))
 	  (srt 0.023181288)
@@ -443,7 +447,7 @@
 			    (- startn2 time2)))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 3
-  (with-mix () "/E/code/feedback/break" 0
+  (with-mix () (format nil "~a~a" *fb-src-dir* "break") 0
     (let* ((sound-list (reverse (data *noise*))))
       (fplay startn2 (startn 3)
 	     (sound (nth (mod i 10) sound-list)
@@ -474,7 +478,7 @@
 	     (printing nil nil))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; rhythms, leaking into next part.
-  (with-mix () "/E/code/feedback/break02" 0
+  (with-mix () (format nil "~a~a" *fb-src-dir* "break02") 0
     (let* ((sound-list (reverse (data *noise*))))
       (fplay startn2 startn3 
 	     (sound (nth (+ 4 (* (round (funcall
@@ -505,7 +509,7 @@
 	     (printing nil))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; rhythms during 4th part.
-  (with-mix () "/E/code/feedback/rhythms" 0
+  (with-mix () (format nil "~a~a" *fb-src-dir* "rhythms") 0
     (let* ((sound-list (reverse (data *noise*))))
       (fplay startn3 (+ startn4 52.5)
 	     (sound (nth 6 sound-list))
@@ -536,7 +540,7 @@
 		     (mirrors (- 90 degl4) 0 90))
 	     (printing nil nil))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (with-mix () "/E/code/feedback/bridge" 0
+  (with-mix () (format nil "~a~a" *fb-src-dir* "bridge") 0
     (let* ((sound-list (reverse (data *pure-atoms*))))
       (fplay startn2 (startn 3)
 	     (srt (srt-fun1 i))
@@ -558,7 +562,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 4
 ;;; Condinuo again, but not quiet
-  (with-mix () "/E/code/feedback/mid" 0
+  (with-mix () (format nil "~a~a" *fb-src-dir* "mid") 0
     (let* ((sound-list (reverse (data *pure-atoms*))))
       (fplay (startn 3) startn4
 	     (srt (srt-fun1 i))
@@ -587,7 +591,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 4 - Remix
 ;;; Re-using Intro
-  (with-mix () "/E/code/feedback/remix" 0
+  (with-mix () (format nil "~a~a" *fb-src-dir* "remix") 0
     (let* ((sound-list (reverse (data *pure-atoms*)))
 	   (intro (format nil "~a~a" *src-dir* "intro.wav"))
 	   (intro-noise (format nil "~a~a" *src-dir* "intro-noise.wav")))
@@ -613,7 +617,7 @@
 	     (degree (nth (mod i 30) (procession 30 '(0 70 20 55 10 45 90)))
 		     (- 90 (nth (mod i 32)
 				(procession 32 '(0 70 20 55 10 45 90))))))))
-  (with-mix () "/E/feed_it/Samples/remixed-noise" 0
+  (with-mix () (format nil "~a~a" *fb-src-dir* "remixed-noise") 0
     (let* ((sound-list (reverse (data *pure-atoms*)))
 	   (intro (format nil "~a~a" *src-dir* "intro.wav"))
 	   (intro-noise (format nil "~a~a" *src-dir* "intro-noise.wav")))
@@ -640,7 +644,7 @@
 		     (- 90 (nth (mod i 32)
 				(procession 32 '(0 70 20 55 10 45 90))))))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (with-mix () "/E/code/feedback/mid_dist" 0
+  (with-mix () (format nil "~a~a" *fb-src-dir* "mid_dist") 0
     (let* ((sound-list (loop for i in '(0 2 4 5 8 10) collect
 			    (nth i (reverse (data *distorted*))))))
       (fplay (startn 3) (startn 4)
@@ -665,7 +669,7 @@
 ;;; Teil 5
 ;;; Intro again, but distorted ;)
 ;;; check if it is possible to get rid of the unedited samples
-  (with-mix () "/E/code/feedback/last" 0
+  (with-mix () (format nil "~a~a" *fb-src-dir* "last") 0
     (sound-let
 	((dist ()			;(:scaled-to 0.95)
 	       (fplay (startn 4) (startn 5)
@@ -702,11 +706,11 @@
 	     (amp-env (env-expt .1 .1 nil t))
 	     (degree 0 90))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-  (with-mix () "/E/code/feedback/bass-last" 0
+  (with-mix () (format nil "~a~a" *fb-src-dir* "bass-last") 0
     (sound-let
 	((bass ()
-	       (let ((file "/E/Keks_Feedback/samples/distorted/cookies_distorted_05a.wav")
-		     (file2 "/E/Keks_Feedback/samples/distorted/cookies_distorted_03.wav")
+	       (let ((file *bass-file-3*)
+		     (file2 *bass-file-1*)
 		     (time (+ (* 0.5 (- (startn 4) (startn 3))) (startn 3) 3.5))
 		     (time2 (+ (* 0.5 (- (startn 4) (startn 3))) (startn 3) 3))
 		     (srt 0.04312288)
@@ -730,7 +734,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;; Teil 6
 ;;; Intro is Outro :P
-  (with-mix () "/E/code/feedback/outro" 0
+  (with-mix () (format nil "~a~a" *fb-src-dir* "outro") 0
     (let* ((sound-list (reverse (data *quiet-atoms*))))
       (fplay (- (startn 5) 3) (- (startn 6) 7)
 	     (srt (srt-fun1 i))
@@ -753,6 +757,14 @@
 	     (degree 0 90))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
   )
+
+;; ** JUNK
+
+;;; all this was used to generate soundfiles that could then be used in the main
+;;; score, as "filler material" (doubling sounds) or just to try things out.
+;;; Tiding this does not make much sense, which is why it is commented out.
+
+#|
 
 (defun remix-rthm (i)
   (let* ((pt1 '(.4 .2 .1 .6 .2))
@@ -880,6 +892,8 @@
 	 (channel 0 1)
 	 (degree 0 90)
 	 ))
+
+|#
 
 #+nil(with-sound (:header-type clm::mus-riff :sampling-rate 48000
 			  :output "/E/feed_it/distorted_05a_x0.06486647.wav"
