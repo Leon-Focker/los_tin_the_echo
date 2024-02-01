@@ -6,8 +6,6 @@
 
 (format t "~&processing SCORE")
 
-;; TODO: *distorted* contains raw samples (bc folder inside folder) :/
-
 (defparameter *bass-file-1* "/E/Keks_Feedback/samples/distorted/cookies_distorted_03.wav")
 (defparameter *bass-file-2* "/E/Keks_Feedback/samples/distorted/cookies_distorted_01a.wav")
 (defparameter *bass-file-3* "/E/Keks_Feedback/samples/distorted/cookies_distorted_05a.wav")
