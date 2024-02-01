@@ -11,6 +11,7 @@
 (defparameter *bass-file-3* "/E/Keks_Feedback/samples/distorted/cookies_distorted_05a.wav")
 
 ;; ** form
+;; this was just a sketch, lots has changed:
 ;; 1 intro (pure)
 ;; 2 rhythmen (pure + percussive)
 ;; 3 short noise block (noise)
