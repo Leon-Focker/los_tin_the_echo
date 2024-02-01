@@ -1,7 +1,8 @@
 ;; * Soundfiles
 ;;; collect and analyse soundfiles, store them in ly::stored-file-list objects.
 ;;; This is an easy way of handling soundfiles. Look into the layers-package for
-;;; more documentation.
+;;; more documentation. If you want to use this yourself, you'd have to replace
+;;; all of the pathnames below:
 
 (in-package :layers)
 

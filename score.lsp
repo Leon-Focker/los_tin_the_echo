@@ -6,7 +6,7 @@
 
 (format t "~&processing SCORE")
 
-;; TODO: *distorted* contains raw samples (bc folder inside foldwer) :/
+;; TODO: *distorted* contains raw samples (bc folder inside folder) :/
 
 ;; ** form
 ;; 1 intro (pure)
@@ -39,7 +39,6 @@
 		       form))
 
 (defparameter *sections* (first *form*))
-(defparameter *start-times-1* (first *form*))
 
 (defun start-times (n-for-layer)
   (when (> n-for-layer (1- (length *form*)))
@@ -79,13 +78,62 @@
 (defparameter *bass-last-f* .85)
 (defparameter *outro-f* 1)
 
-;; prevent style-warnings:
-;;(defun :scaled-by ())
-
 ;; ** material
 
+;; *** abstractions
+
+;; abstraction for window-transitions
 (defun wt (length levels &optional (e 0.8))
   (window-transitions length levels e 1))
+
+(defparameter *amp-env01*
+  (append 
+   (loop for i from 0 to 80 collect i collect (expt (/ i 80) 0.3))
+   (loop for i from 81 to 100 collect i collect (expt (/ (- 100 i) 20) 0.3))))
+
+(defun env-fun1 (breakpoint &optional (exponent 0.3))
+  (let ((bp (max 0 (min 100 (round breakpoint)))))
+    (append
+     (if (= bp 0) '(0 1)
+	 (loop for i from 0 to bp
+	    collect i collect (expt (/ i bp) exponent)))
+     (loop for i from (1+ bp) to 100
+	collect i collect (expt (/ (- 100 i) (- 100 bp)) exponent)))))
+
+;; base should be between 0 and 1
+(defun env-expt (pow &optional (base 0) reverse? flip?)
+  (unless (<= 0 base 1)
+    (warn "base should be between or equal to 0 and 1 but is: ~a" base))
+  (loop for i from 0 to 100
+     for val = (expt (/ (if reverse? (- 100 i) i) 100) pow)
+     collect i collect
+       (+ (* (- 1 base) (if flip? (- 1 val) val))
+	  base)))
+
+;; srt-env function
+(defun srt-break (breakpoint new-val &optional (br-len .001))
+  (unless (and (numberp breakpoint) (numberp new-val))
+    (error "all arguments in srt-break should be numbers"))
+  (cond ((<= breakpoint 0) `(0 ,new-val 100 ,new-val))
+	((>= breakpoint (- 100 br-len)) `(0 0 100 0))
+	(t `(0 0 ,breakpoint 0 ,(+ breakpoint br-len) ,new-val 100 ,new-val))))
+
+(defun srt-break2 (breakpoint old-val &optional (br-len .001))
+  (unless (and (numberp breakpoint) (numberp old-val))
+    (error "all arguments in srt-break should be numbers"))
+  (cond ((<= breakpoint 0) `(0 0 100 0))
+	((>= breakpoint (- 100 br-len)) `(0 ,old-val 100 ,old-val))
+	(t `(0 ,old-val ,breakpoint ,old-val ,(+ breakpoint br-len) 0 100 0))))
+
+;; *** patterns
+
+(defparameter *pattern1* '(0.5 0.75 0.5 0.75 0.5 0.75 0.75))
+(defparameter *pattern2* '(0.5 0.75 0.75 0.5 0.75 0.5 0.75))
+(defparameter *pattern3* '(0.75 0.5 0.75 0.5 0.75 0.5 0.5 0.75))
+(defparameter *pattern4* '(1/2 2/3 1/2 1/3 1/3 1/3 3/4))
+(defparameter *pattern5* '(0.2 0.45 0.2 0.5 0.45))
+(defparameter *pattern6* '(1 1/6 1/6 0.2 1/3))
+(defparameter *pattern7* '(0.2 0.2 0.4))
 
 ;; collection of patterns, not very tidy
 (let* ((len 30)
@@ -224,7 +272,6 @@
 
 ;; ** Generation
 
-;;; TODO: Multichannel
 (with-sound (:header-type clm::mus-riff :sampling-rate 48000
 			  :output "/E/code/feedback/just_feed_it.wav"
 			  :channels 2 :play nil :scaled-to 0.98
@@ -882,8 +929,6 @@
 		 (* (rthms1 (1+ i) 1) time-mult))
 	   (rhythm rthm rthm2 rthm rthm2 rthm rthm2)
 	   (degree 0 90 0 90 0 90))))
-
-;; (load "/E/code/feedback/spatial.lsp")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; EOF score.lsp
