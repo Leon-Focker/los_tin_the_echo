@@ -37,7 +37,7 @@
 						:duration (* 60 7.5)
 						:smallest 2))
 			    (form (cdr (reverse (data st)))))
-		       ;;(visualize-structure st 1 "/E/code/feedback/structure_comp1.png")
+		       ;;(visualize-structure st "/E/code/feedback/structure_comp1.png" 1)
 		       form))
 
 (defparameter *sections* (first *form*))
